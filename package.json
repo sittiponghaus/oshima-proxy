@@ -1,0 +1,33 @@
+{
+  "name": "@snco/oshima-proxy",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --hot cmd/server.ts",
+    "start": "NODE_ENV=production bun cmd/server.ts",
+    "build": "bun run build.ts",
+    "fmt:write": "oxfmt --write \"**/*.{ts,tsx,js,jsx}\"",
+    "fmt:check": "oxfmt --check \"**/*.{ts,tsx,js,jsx}\""
+  },
+  "dependencies": {
+    "@effect/atom-react": "4.0.0-beta.99",
+    "@effect/opentelemetry": "^4.0.0-beta.99",
+    "@effect/platform-bun": "^4.0.0-beta.99",
+    "@vis.gl/react-maplibre": "^8.1.1",
+    "effect": "^4.0.0-beta.99",
+    "maplibre-gl": "^5.24.0",
+    "react": "^19",
+    "react-dom": "^19"
+  },
+  "devDependencies": {
+    "@effect/language-service": "^0.86.6",
+    "@types/bun": "latest",
+    "@types/geojson": "^7946.0.16",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "bun-plugin-tailwind": "^0.1.2",
+    "oxfmt": "^0.58.0",
+    "tailwindcss": "^4.1.11"
+  }
+}
