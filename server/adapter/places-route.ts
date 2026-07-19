@@ -113,11 +113,8 @@ export const PlacesRouteLive = Layer.effectDiscard(
       }).pipe(
         Effect.catch((error) =>
           Effect.succeed(
-            typeof error === "object" &&
-              error !== null &&
-              "_id" in error &&
-              (error as { _id: unknown })._id === "HttpServerResponse"
-              ? (error as HttpServerResponse.HttpServerResponse)
+            HttpServerResponse.isHttpServerResponse(error)
+              ? error
               : jsonError(502, "Nominatim search unreachable")
           )
         )
@@ -176,17 +173,13 @@ export const PlacesRouteLive = Layer.effectDiscard(
           })
         })
       }).pipe(
-        Effect.catch((error) => {
-          if (
-            typeof error === "object" &&
-            error !== null &&
-            "_id" in error &&
-            (error as { _id: unknown })._id === "HttpServerResponse"
-          ) {
-            return Effect.succeed(error as HttpServerResponse.HttpServerResponse)
-          }
-          return Effect.succeed(jsonError(502, "Nominatim lookup unreachable"))
-        })
+        Effect.catch((error) =>
+          Effect.succeed(
+            HttpServerResponse.isHttpServerResponse(error)
+              ? error
+              : jsonError(502, "Nominatim lookup unreachable")
+          )
+        )
       )
     )
   })

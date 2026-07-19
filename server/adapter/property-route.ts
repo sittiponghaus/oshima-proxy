@@ -102,18 +102,7 @@ export const PropertyRouteLive = Layer.effectDiscard(
                 continue
               }
 
-              if (response.status === 404) {
-                return yield* Effect.fail(
-                  jsonError(404, {
-                    error: "Property not found",
-                    cloudflare: false,
-                    key,
-                    sourceUrl: propertySourceUrl(key),
-                    contributeUrl: propertyContributeUrl()
-                  })
-                )
-              }
-
+              // EN miss (404) should fall through to JP before giving up.
               if (response.status < 200 || response.status >= 300) continue
 
               let parsed: unknown
@@ -175,22 +164,16 @@ export const PropertyRouteLive = Layer.effectDiscard(
           })
         })
       }).pipe(
-        Effect.catch((error) => {
-          if (
-            typeof error === "object" &&
-            error !== null &&
-            "_id" in error &&
-            (error as { _id: unknown })._id === "HttpServerResponse"
-          ) {
-            return Effect.succeed(error as HttpServerResponse.HttpServerResponse)
-          }
-          return Effect.succeed(
-            jsonError(502, {
-              error: "Upstream property API unreachable",
-              cloudflare: false
-            })
+        Effect.catch((error) =>
+          Effect.succeed(
+            HttpServerResponse.isHttpServerResponse(error)
+              ? error
+              : jsonError(502, {
+                  error: "Upstream property API unreachable",
+                  cloudflare: false
+                })
           )
-        })
+        )
       )
     )
   })

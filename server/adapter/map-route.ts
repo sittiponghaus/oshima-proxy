@@ -73,11 +73,8 @@ export const MapRouteLive = Layer.effectDiscard(
       }).pipe(
         Effect.catch((error) =>
           Effect.succeed(
-            typeof error === "object" &&
-              error !== null &&
-              "_id" in error &&
-              (error as { _id: unknown })._id === "HttpServerResponse"
-              ? (error as HttpServerResponse.HttpServerResponse)
+            HttpServerResponse.isHttpServerResponse(error)
+              ? error
               : jsonError(502, "Upstream map API unreachable")
           )
         )

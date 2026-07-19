@@ -28,6 +28,11 @@ const writeMemory = (key: string, entry: CacheEntry) => {
   memory.set(key, entry)
 }
 
+/** Clears in-process route cache (unit/integration tests). */
+export const clearRouteCacheMemory = () => {
+  memory.clear()
+}
+
 const hasCacheApi = () => typeof caches !== "undefined" && "default" in caches
 
 const readEdge = async (key: string): Promise<CacheEntry | null> => {
