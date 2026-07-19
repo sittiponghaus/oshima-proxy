@@ -6,6 +6,11 @@ out
 dist
 *.tgz
 
+# wrangler
+.wrangler
+.dev.vars
+worker-configuration.d.ts
+
 # code coverage
 coverage
 *.lcov

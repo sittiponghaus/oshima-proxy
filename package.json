@@ -4,9 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "bun --hot cmd/server.ts",
+    "dev": "bun run build && wrangler dev",
+    "dev:bun": "bun --hot cmd/server.ts",
     "start": "NODE_ENV=production bun cmd/server.ts",
     "build": "bun run build.ts",
+    "deploy": "bun run build && wrangler deploy",
+    "cf-typegen": "wrangler types",
     "fmt:write": "oxfmt --write \"**/*.{ts,tsx,js,jsx}\"",
     "fmt:check": "oxfmt --check \"**/*.{ts,tsx,js,jsx}\""
   },
@@ -28,6 +31,7 @@
     "@types/react-dom": "^19",
     "bun-plugin-tailwind": "^0.1.2",
     "oxfmt": "^0.58.0",
-    "tailwindcss": "^4.1.11"
+    "tailwindcss": "^4.1.11",
+    "wrangler": "^4.112.0"
   }
 }
