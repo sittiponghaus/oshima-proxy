@@ -20,7 +20,8 @@
     "noImplicitOverride": true,
 
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "package.json": ["./package.json"]
     },
     "plugins": [
       {

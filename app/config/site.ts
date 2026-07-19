@@ -1,5 +1,5 @@
 /** Public source repository for this viewer (edit if the remote differs). */
-export const GITHUB_REPO_URL = "https://github.com/snco/oshima-proxy";
+export const GITHUB_REPO_URL = "https://github.com/sittipong/oshima-proxy"
 
 /** Official Oshimaland English site (canonical public homepage). */
-export const OSHIMALAND_SITE_URL = "https://www.oshimaland.com/";
+export const OSHIMALAND_SITE_URL = "https://www.oshimaland.com/"

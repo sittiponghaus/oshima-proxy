@@ -1,0 +1,29 @@
+---
+description: App/server layering — app never imports server; usecase/repository mappers
+globs: app/**/*.{ts,tsx},server/**/*.ts,shared/**/*.ts
+alwaysApply: false
+---
+
+# Layer boundaries
+
+## Import rules
+
+- `app/` **never** imports from `server/` (directly or via `@/server/...`).
+- Shared contracts live in `shared/` (HTTP helpers, Oshima schemas, quadkeys).
+- Browser HTTP clients live in `app/adapter/` (not `server/adapter/`).
+- `server/adapter/*-route.ts` is Worker/upstream only.
+- Enforce with `bun run check:boundaries`.
+
+## Data flow
+
+```
+container ← usecase mapper (domain → container shape)
+    ↑
+usecase   ← calls repository only
+    ↑
+repository ← wraps adapter + repository mapper (wire → domain)
+    ↑
+app/adapter or shared
+```
+
+Both `usecase/` and `repository/` may own their own mapper when shapes differ. Do not map container shapes inside adapters or repositories beyond domain, and do not call repositories from components.

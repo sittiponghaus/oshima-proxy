@@ -2,9 +2,7 @@
 
 const MIN_ZOOM = 0
 const MAX_ZOOM = 23
-const MASK_TABLE = Array.from({ length: MAX_ZOOM + 1 }, (_, zoom) =>
-  zoom === 0 ? 0 : 2 ** (zoom - 1),
-)
+const MASK_TABLE = Array.from({ length: MAX_ZOOM + 1 }, (_, zoom) => (zoom === 0 ? 0 : 2 ** (zoom - 1)))
 
 export type LatLng = { lat: number; lng: number }
 
@@ -20,7 +18,7 @@ export function latLngToPixel(lat: number, lng: number, zoom: number): { x: numb
   return {
     x: Math.floor(clip(x * scale, 0, scale - 1)),
     y: Math.floor(clip(y * scale, 0, scale - 1)),
-    zoom,
+    zoom
   }
 }
 
@@ -37,17 +35,8 @@ export function tileToQuadkey(x: number, y: number, zoom: number): string {
   return digits.join("")
 }
 
-export function latLngToQuadkey(lat: number, lng: number, zoom: number): string {
-  const tile = latLngToPixel(lat, lng, zoom)
-  return tileToQuadkey(tile.x, tile.y, tile.zoom)
-}
-
 /** Keys covering a viewport AABB at a given zoom (inclusive). */
-export function quadkeysForBounds(
-  ne: LatLng,
-  sw: LatLng,
-  zoom: number,
-): string[] {
+export function quadkeysForBounds(ne: LatLng, sw: LatLng, zoom: number): string[] {
   const topLeft = latLngToPixel(ne.lat, sw.lng, zoom)
   const bottomRight = latLngToPixel(sw.lat, ne.lng, zoom)
   const keys = new Set<string>()

@@ -10,6 +10,25 @@ OL Proxy — Cloudflare Workers + Effect proxy for Oshimaland map data, with a R
 - **Map:** MapLibre + OpenFreeMap
 - **Places:** OpenStreetMap Nominatim (no API key)
 
+## Caching
+
+Upstream responses are cached (Workers Cache API when available, otherwise in-memory) using `ROUTE_CACHE_POLICY` in `server/config/cache.ts`:
+
+| Route | TTL |
+|-------|-----|
+| `POST /api/v1/map` | 60s |
+| `GET /api/v1/property/:key` | 1h |
+| Places autocomplete / details | 5m |
+
+Responses include a strong `ETag` (SHA-256 of the JSON body). Matching `If-None-Match` returns `304` without re-fetching the origin.
+
+- **CORS:** same-origin only, credentialed (`Access-Control-Allow-Credentials`)
+- **CSRF (CSR):** double-submit cookie `ol_csrf` + header `x-csrf-token`; bootstrap via `GET /api/v1/csrf`
+- **Client marker:** `x-ol-client: ol-proxy` required on API calls (blocks simple form CSRF)
+- **Origin check:** `Origin` / `Referer` must match the Worker origin
+- **CSP (SPA):** `public/_headers` → Workers Assets; meta CSP in `app/entrypoint.html` for Bun HMR
+- **CSP (API):** `default-src 'none'` plus COOP/CORP/`nosniff`/`DENY` frame options
+
 ## Setup
 
 ```bash
@@ -25,6 +44,8 @@ Deploy:
 
 ```bash
 bun run deploy
+# versioned upload + traffic deploy (Gradual Deployments):
+bun run deploy:version
 # optional secrets:
 # wrangler secret put OSHIMA_COOKIE
 # wrangler secret put OSHIMA_USER_AGENT
@@ -33,16 +54,16 @@ bun run deploy
 ## API
 
 ```http
-POST /api/map
+POST /api/v1/map
 Content-Type: application/json
 
 { "keys": ["032010110132"] }
 ```
 
 ```http
-GET /api/places/autocomplete?q=tokyo
-GET /api/places/details?placeId=N123
-GET /api/property/:key
+GET /api/v1/places/autocomplete?q=tokyo
+GET /api/v1/places/details?placeId=N123
+GET /api/v1/property/:key
 ```
 
 Autocomplete returns suggestions with `lat`/`lng` so the UI can fly the map without a details roundtrip. Details uses Nominatim lookup by OSM id (`N…` / `W…` / `R…`).
