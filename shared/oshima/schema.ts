@@ -4,7 +4,7 @@ export const MapMarker = Schema.Struct({
   key: Schema.String,
   latitude: Schema.Number,
   longitude: Schema.Number,
-  cluster_key: Schema.String,
+  cluster_key: Schema.String
 })
 export type MapMarker = typeof MapMarker.Type
 
@@ -16,18 +16,18 @@ export const MapCluster = Schema.Struct({
   min_latitude: Schema.Number,
   max_latitude: Schema.Number,
   min_longitude: Schema.Number,
-  max_longitude: Schema.Number,
+  max_longitude: Schema.Number
 })
 export type MapCluster = typeof MapCluster.Type
 
 export const MapResponse = Schema.Struct({
   markers: Schema.Record(Schema.String, Schema.Array(MapMarker)),
-  clusters: Schema.Record(Schema.String, Schema.Array(MapCluster)),
+  clusters: Schema.Record(Schema.String, Schema.Array(MapCluster))
 })
 export type MapResponse = typeof MapResponse.Type
 
 export const MapRequest = Schema.Struct({
-  keys: Schema.Array(Schema.String),
+  keys: Schema.Array(Schema.String)
 })
 export type MapRequest = typeof MapRequest.Type
 
@@ -54,13 +54,13 @@ export function mergeMapResponses(parts: readonly MapResponse[]): MapResponse {
 export const PropertyImage = Schema.Struct({
   name: Schema.String,
   width: Schema.optionalKey(Schema.Number),
-  height: Schema.optionalKey(Schema.Number),
+  height: Schema.optionalKey(Schema.Number)
 })
 export type PropertyImage = typeof PropertyImage.Type
 
 export const PropertyLink = Schema.Struct({
   uri: Schema.String,
-  title: Schema.optionalKey(Schema.String),
+  title: Schema.optionalKey(Schema.String)
 })
 export type PropertyLink = typeof PropertyLink.Type
 
@@ -74,11 +74,11 @@ export const PropertyUpstream = Schema.Struct({
   cr: Schema.optionalKey(Schema.String),
   tr: Schema.optionalKey(Schema.Boolean),
   images: Schema.optionalKey(Schema.Array(PropertyImage)),
-  links: Schema.optionalKey(Schema.Array(PropertyLink)),
+  links: Schema.optionalKey(Schema.Array(PropertyLink))
 })
 export type PropertyUpstream = typeof PropertyUpstream.Type
 
-/** Normalized property detail returned by `/api/property/:key` */
+/** Normalized property detail returned by `/api/v1/property/:key` */
 export const PropertyDetail = Schema.Struct({
   key: Schema.String,
   lat: Schema.NullOr(Schema.Number),
@@ -93,17 +93,17 @@ export const PropertyDetail = Schema.Struct({
       name: Schema.String,
       width: Schema.NullOr(Schema.Number),
       height: Schema.NullOr(Schema.Number),
-      url: Schema.String,
-    }),
+      url: Schema.String
+    })
   ),
   links: Schema.Array(
     Schema.Struct({
       uri: Schema.String,
-      title: Schema.String,
-    }),
+      title: Schema.String
+    })
   ),
   sourceUrl: Schema.String,
-  contributeUrl: Schema.String,
+  contributeUrl: Schema.String
 })
 export type PropertyDetail = typeof PropertyDetail.Type
 
@@ -114,13 +114,6 @@ export const OSHIMALAND_JP = "https://www.oshimaland.co.jp"
 export const PROPERTY_DATA_DIR_EN = "/d_en/"
 /** Japanese site property JSON prefix (`/d/` when IsJp). */
 export const PROPERTY_DATA_DIR_JP = "/d/"
-/**
- * English site submit API path (`pc.en.js` POST_DIR).
- * Used only as `fetch(..., { method: "POST" })` — GET returns 404 (`Cannot GET /post_en`).
- * There is no public deep-link for the contribute form.
- */
-export const POST_DIR = "/post_en"
-
 export function propertySourceUrl(key: string): string {
   return `${OSHIMALAND_EN}/?p=${encodeURIComponent(key)}`
 }
@@ -144,17 +137,17 @@ export function normalizeProperty(raw: PropertyUpstream): PropertyDetail {
     info: raw.info?.trim() ? raw.info : null,
     contribution: raw.cr?.trim() ? raw.cr : null,
     trusted: raw.tr ?? null,
-    images: (raw.images ?? []).map(img => ({
+    images: (raw.images ?? []).map((img) => ({
       name: img.name,
       width: img.width ?? null,
       height: img.height ?? null,
-      url: `${PHOTO_BASE}${img.name}`,
+      url: `${PHOTO_BASE}${img.name}`
     })),
-    links: (raw.links ?? []).map(link => ({
+    links: (raw.links ?? []).map((link) => ({
       uri: link.uri,
-      title: link.title?.trim() ? link.title : link.uri,
+      title: link.title?.trim() ? link.title : link.uri
     })),
     sourceUrl: propertySourceUrl(key),
-    contributeUrl: propertyContributeUrl(),
+    contributeUrl: propertyContributeUrl()
   }
 }

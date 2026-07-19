@@ -1,13 +1,8 @@
-import { Effect, Layer, Result, Schema } from "effect"
-import {
-  HttpClient,
-  HttpClientRequest,
-  HttpRouter,
-  HttpServerRequest,
-  HttpServerResponse,
-} from "effect/unstable/http"
-
+import { cacheKeyMap, withRouteCache } from "@/server/runtime/response-cache"
+import { apiPath } from "@/shared/http/api"
 import { MapResponse, mergeMapResponses } from "@/shared/oshima/schema"
+import { Effect, Layer, Result, Schema } from "effect"
+import { HttpClient, HttpClientRequest, HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/unstable/http"
 
 const UPSTREAM = "https://api.oshimaland.co.jp/map"
 /**
@@ -17,17 +12,10 @@ const UPSTREAM = "https://api.oshimaland.co.jp/map"
 const UPSTREAM_KEY_BATCH = 100
 
 const MapRequestBody = Schema.Struct({
-  keys: Schema.Array(Schema.String).check(Schema.isMinLength(1)),
+  keys: Schema.Array(Schema.String).check(Schema.isMinLength(1))
 })
 
-const corsHeaders = {
-  "access-control-allow-origin": "*",
-  "access-control-allow-methods": "POST, OPTIONS",
-  "access-control-allow-headers": "content-type, accept",
-} as const
-
-const jsonError = (status: number, error: string) =>
-  HttpServerResponse.jsonUnsafe({ error }, { status, headers: corsHeaders })
+const jsonError = (status: number, error: string) => HttpServerResponse.jsonUnsafe({ error }, { status })
 
 function chunkKeys(keys: readonly string[], size: number): string[][] {
   const batches: string[][] = []
@@ -39,21 +27,16 @@ function chunkKeys(keys: readonly string[], size: number): string[][] {
 
 const fetchUpstreamBatch = (keys: readonly string[]) =>
   Effect.gen(function* () {
-    const request = yield* HttpClientRequest.bodyJson(
-      HttpClientRequest.post(UPSTREAM),
-      { keys },
-    )
+    const request = yield* HttpClientRequest.bodyJson(HttpClientRequest.post(UPSTREAM), { keys })
     const upstreamRequest = HttpClientRequest.setHeaders(request, {
       accept: "application/json",
       origin: "https://www.oshimaland.com",
-      referer: "https://www.oshimaland.com/",
+      referer: "https://www.oshimaland.com/"
     })
 
     const response = yield* HttpClient.execute(upstreamRequest)
     if (response.status < 200 || response.status >= 300) {
-      return yield* Effect.fail(
-        jsonError(502, `Upstream map API returned HTTP ${response.status}`),
-      )
+      return yield* Effect.fail(jsonError(502, `Upstream map API returned HTTP ${response.status}`))
     }
 
     const text = yield* response.text
@@ -65,50 +48,37 @@ export const MapRouteLive = Layer.effectDiscard(
     const router = yield* HttpRouter.HttpRouter
 
     yield* router.add(
-      "OPTIONS",
-      "/api/map",
-      HttpServerResponse.empty({ status: 204 }).pipe(
-        HttpServerResponse.setHeaders(corsHeaders),
-      ),
-    )
-
-    yield* router.add(
       "POST",
-      "/api/map",
+      apiPath("/map"),
       Effect.gen(function* () {
-        const decoded = yield* Effect.result(
-          HttpServerRequest.schemaBodyJson(MapRequestBody),
-        )
+        const decoded = yield* Effect.result(HttpServerRequest.schemaBodyJson(MapRequestBody))
         if (Result.isFailure(decoded)) {
           return jsonError(400, "Body must be { keys: string[] } (min 1)")
         }
 
         const body = Result.getOrThrow(decoded)
-        const batches = chunkKeys(body.keys, UPSTREAM_KEY_BATCH)
-        const parts = yield* Effect.forEach(batches, fetchUpstreamBatch, {
-          concurrency: 4,
-        })
-        const payload = mergeMapResponses(parts)
+        const keys = [...new Set(body.keys)]
 
-        return HttpServerResponse.jsonUnsafe(payload, {
-          status: 200,
-          headers: {
-            ...corsHeaders,
-            "cache-control": "private, max-age=30",
-          },
+        return yield* withRouteCache({
+          kind: "map",
+          cacheKey: cacheKeyMap(keys),
+          load: Effect.gen(function* () {
+            const batches = chunkKeys(keys, UPSTREAM_KEY_BATCH)
+            const parts = yield* Effect.forEach(batches, fetchUpstreamBatch, {
+              concurrency: 4
+            })
+            return mergeMapResponses(parts)
+          })
         })
       }).pipe(
-        Effect.catch(error =>
+        Effect.catch((error) =>
           Effect.succeed(
-            typeof error === "object" &&
-              error !== null &&
-              "_id" in error &&
-              (error as { _id: unknown })._id === "HttpServerResponse"
-              ? (error as HttpServerResponse.HttpServerResponse)
-              : jsonError(502, "Upstream map API unreachable"),
-          ),
-        ),
-      ),
+            HttpServerResponse.isHttpServerResponse(error)
+              ? error
+              : jsonError(502, "Upstream map API unreachable")
+          )
+        )
+      )
     )
-  }),
+  })
 )
