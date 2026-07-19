@@ -18,7 +18,10 @@ let handlerPromise: Promise<WebHandler> | undefined
 const getHandler = (env: Env): Promise<WebHandler> => {
   if (!handlerPromise) {
     handlerPromise = Promise.resolve().then(() => {
-      const { handler } = HttpRouter.toWebHandler(RoutesWithoutEnvLive.pipe(Layer.provide(EnvironmentFromWorker(env))))
+      // provideMerge keeps Environment in runtime context for global middleware.
+      const { handler } = HttpRouter.toWebHandler(
+        RoutesWithoutEnvLive.pipe(Layer.provideMerge(EnvironmentFromWorker(env)))
+      )
       return (request: Request) => handler(request)
     })
   }
