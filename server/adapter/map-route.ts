@@ -1,4 +1,3 @@
-import * as BunHttpClient from "@effect/platform-bun/BunHttpClient"
 import { Effect, Layer, Result, Schema } from "effect"
 import {
   HttpClient,
@@ -99,7 +98,6 @@ export const MapRouteLive = Layer.effectDiscard(
           },
         })
       }).pipe(
-        Effect.provide(BunHttpClient.layer),
         Effect.catch(error =>
           Effect.succeed(
             typeof error === "object" &&

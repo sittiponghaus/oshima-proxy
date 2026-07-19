@@ -35,3 +35,11 @@ await Bun.write(faviconDest, Bun.file(faviconSrc))
 console.log(
   ` ${path.relative(process.cwd(), faviconDest)}  ${((await Bun.file(faviconDest).size) / 1024).toFixed(1)} KB`,
 )
+
+// Workers Assets SPA expects index.html
+const entryHtml = path.join(outdir, "entrypoint.html")
+const indexHtml = path.join(outdir, "index.html")
+if (await Bun.file(entryHtml).exists()) {
+  await Bun.write(indexHtml, Bun.file(entryHtml))
+  console.log(` ${path.relative(process.cwd(), indexHtml)}  (SPA index)`)
+}

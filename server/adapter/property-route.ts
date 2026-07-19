@@ -1,4 +1,3 @@
-import * as BunHttpClient from "@effect/platform-bun/BunHttpClient"
 import { Effect, Layer, Schema } from "effect"
 import {
   HttpClient,
@@ -64,9 +63,6 @@ const propertyUpstreams = (key: string): ReadonlyArray<UpstreamAttempt> => {
   ]
 }
 
-const withClient = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
-  effect.pipe(Effect.provide(BunHttpClient.layer))
-
 export const PropertyRouteLive = Layer.effectDiscard(
   Effect.gen(function* () {
     const router = yield* HttpRouter.HttpRouter
@@ -83,8 +79,7 @@ export const PropertyRouteLive = Layer.effectDiscard(
     yield* router.add(
       "GET",
       "/api/property/:key",
-      withClient(
-        Effect.gen(function* () {
+      Effect.gen(function* () {
           const params = yield* HttpRouter.schemaPathParams(KeyParam).pipe(
             Effect.catch(() =>
               Effect.fail(
@@ -209,26 +204,25 @@ export const PropertyRouteLive = Layer.effectDiscard(
             sourceUrl: propertySourceUrl(key),
             contributeUrl: propertyContributeUrl(),
           })
-        }).pipe(
-          Effect.catch(error => {
-            if (
-              typeof error === "object" &&
-              error !== null &&
-              "_id" in error &&
-              (error as { _id: unknown })._id === "HttpServerResponse"
-            ) {
-              return Effect.succeed(
-                error as HttpServerResponse.HttpServerResponse,
-              )
-            }
+      }).pipe(
+        Effect.catch(error => {
+          if (
+            typeof error === "object" &&
+            error !== null &&
+            "_id" in error &&
+            (error as { _id: unknown })._id === "HttpServerResponse"
+          ) {
             return Effect.succeed(
-              jsonError(502, {
-                error: "Upstream property API unreachable",
-                cloudflare: false,
-              }),
+              error as HttpServerResponse.HttpServerResponse,
             )
-          }),
-        ),
+          }
+          return Effect.succeed(
+            jsonError(502, {
+              error: "Upstream property API unreachable",
+              cloudflare: false,
+            }),
+          )
+        }),
       ),
     )
   }),

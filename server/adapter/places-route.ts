@@ -1,4 +1,3 @@
-import * as BunHttpClient from "@effect/platform-bun/BunHttpClient"
 import { Effect, Layer, Schema } from "effect"
 import {
   HttpClient,
@@ -38,9 +37,6 @@ const NominatimResults = Schema.Array(NominatimResult)
 
 const jsonError = (status: number, error: string) =>
   HttpServerResponse.jsonUnsafe({ error }, { status })
-
-const withClient = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
-  effect.pipe(Effect.provide(BunHttpClient.layer))
 
 const nominatimGet = (url: string) =>
   HttpClientRequest.setHeaders(HttpClientRequest.get(url), {
@@ -97,8 +93,7 @@ export const PlacesRouteLive = Layer.effectDiscard(
     yield* router.add(
       "GET",
       "/api/places/autocomplete",
-      withClient(
-        Effect.gen(function* () {
+      Effect.gen(function* () {
           const query = yield* HttpServerRequest.schemaSearchParams(
             AutocompleteQuery,
           ).pipe(Effect.orElseSucceed(() => ({ q: "" })))
@@ -136,14 +131,12 @@ export const PlacesRouteLive = Layer.effectDiscard(
             Effect.succeed(jsonError(502, "Nominatim search unreachable")),
           ),
         ),
-      ),
     )
 
     yield* router.add(
       "GET",
       "/api/places/details",
-      withClient(
-        Effect.gen(function* () {
+      Effect.gen(function* () {
           const query = yield* HttpServerRequest.schemaSearchParams(
             DetailsQuery,
           ).pipe(
@@ -211,7 +204,6 @@ export const PlacesRouteLive = Layer.effectDiscard(
             )
           }),
         ),
-      ),
     )
   }),
 )

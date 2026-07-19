@@ -12,6 +12,11 @@ export class Environment extends Context.Service<
   }
 >()("oshima/Environment") {}
 
+export type WorkerEnvBindings = {
+  readonly OSHIMA_COOKIE?: string
+  readonly OSHIMA_USER_AGENT?: string
+}
+
 const optionalEnvString = (name: string) =>
   Config.string(name).pipe(
     Config.withDefault(""),
@@ -21,6 +26,12 @@ const optionalEnvString = (name: string) =>
     }),
   )
 
+const optionalBinding = (value: string | undefined) => {
+  const trimmed = value?.trim()
+  return trimmed && trimmed.length > 0 ? trimmed : undefined
+}
+
+/** Local Bun / process.env */
 export const EnvironmentLive = Layer.effect(
   Environment,
   Effect.gen(function* () {
@@ -30,3 +41,14 @@ export const EnvironmentLive = Layer.effect(
     return Environment.of({ port, oshimaCookie, oshimaUserAgent })
   }),
 )
+
+/** Cloudflare Workers vars / secrets */
+export const EnvironmentFromWorker = (env: WorkerEnvBindings) =>
+  Layer.succeed(
+    Environment,
+    Environment.of({
+      port: 0,
+      oshimaCookie: optionalBinding(env.OSHIMA_COOKIE),
+      oshimaUserAgent: optionalBinding(env.OSHIMA_USER_AGENT),
+    }),
+  )
