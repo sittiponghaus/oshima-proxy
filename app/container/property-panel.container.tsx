@@ -30,7 +30,8 @@ export function PropertyPanel({ marker, onClose }: Props) {
   const propertyQuery = useQuery(propertyDetailQueryOptions(marker.key))
 
   const state: PropertyLoadState = useMemo(() => {
-    if (propertyQuery.isPending || propertyQuery.isFetching) {
+    // Use isPending (no data yet), not isFetching — keep showing stale detail during background refetch.
+    if (propertyQuery.isPending) {
       return { status: LoadStatus.Loading }
     }
     if (propertyQuery.isError) {
@@ -40,7 +41,7 @@ export function PropertyPanel({ marker, onClose }: Props) {
       return { status: LoadStatus.Ready, detail: propertyQuery.data }
     }
     return { status: LoadStatus.Loading }
-  }, [marker.key, propertyQuery.data, propertyQuery.error, propertyQuery.isError, propertyQuery.isFetching, propertyQuery.isPending])
+  }, [marker.key, propertyQuery.data, propertyQuery.error, propertyQuery.isError, propertyQuery.isPending])
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {

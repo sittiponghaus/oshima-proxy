@@ -84,9 +84,10 @@ export function MapView({
             <div
               className={active ? "oshima-marker oshima-marker--active" : "oshima-marker"}
               title={active ? "Selected property" : "Reported property — click for details"}
-              aria-current={active ? "true" : undefined}
-              aria-hidden="true">
-              🔥
+              role="img"
+              aria-label={active ? "Selected property" : "Reported property"}
+              aria-current={active ? "true" : undefined}>
+              <span aria-hidden="true">🔥</span>
             </div>
           </Marker>
         )
