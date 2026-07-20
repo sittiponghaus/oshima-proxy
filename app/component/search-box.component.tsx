@@ -74,13 +74,7 @@ export function SearchBoxView({
         </button>
       ) : null}
 
-      {error ? (
-        <p className="mt-2 text-xs text-[var(--ember)]">{error}</p>
-      ) : query.length === 0 ? (
-        <p className="mt-1.5 text-[0.65rem] text-[var(--muted)]">
-          Powered by OpenStreetMap — flies the map to any address or city
-        </p>
-      ) : null}
+      {error ? <p className="mt-2 text-xs text-[var(--ember)]">{error}</p> : null}
 
       {open && suggestions.length > 0 ? (
         <ul

@@ -40,6 +40,7 @@ const jsonError = (status: number, error: string) => HttpServerResponse.jsonUnsa
 const nominatimGet = (url: string) =>
   HttpClientRequest.setHeaders(HttpClientRequest.get(url), {
     accept: "application/json",
+    "accept-language": "en",
     "user-agent": USER_AGENT
   })
 
@@ -99,6 +100,7 @@ export const PlaceRouteLive = Layer.effectDiscard(
             endpoint.searchParams.set("format", "json")
             endpoint.searchParams.set("addressdetails", "1")
             endpoint.searchParams.set("limit", "8")
+            endpoint.searchParams.set("accept-language", "en")
 
             const response = yield* HttpClient.execute(nominatimGet(endpoint.toString()))
             if (response.status < 200 || response.status >= 300) {
@@ -113,9 +115,7 @@ export const PlaceRouteLive = Layer.effectDiscard(
       }).pipe(
         Effect.catch((error) =>
           Effect.succeed(
-            HttpServerResponse.isHttpServerResponse(error)
-              ? error
-              : jsonError(502, "Nominatim search unreachable")
+            HttpServerResponse.isHttpServerResponse(error) ? error : jsonError(502, "Nominatim search unreachable")
           )
         )
       )
@@ -146,6 +146,7 @@ export const PlaceRouteLive = Layer.effectDiscard(
             endpoint.searchParams.set("osm_ids", osmIds)
             endpoint.searchParams.set("format", "json")
             endpoint.searchParams.set("addressdetails", "1")
+            endpoint.searchParams.set("accept-language", "en")
 
             const response = yield* HttpClient.execute(nominatimGet(endpoint.toString()))
             if (response.status < 200 || response.status >= 300) {
@@ -175,9 +176,7 @@ export const PlaceRouteLive = Layer.effectDiscard(
       }).pipe(
         Effect.catch((error) =>
           Effect.succeed(
-            HttpServerResponse.isHttpServerResponse(error)
-              ? error
-              : jsonError(502, "Nominatim lookup unreachable")
+            HttpServerResponse.isHttpServerResponse(error) ? error : jsonError(502, "Nominatim lookup unreachable")
           )
         )
       )

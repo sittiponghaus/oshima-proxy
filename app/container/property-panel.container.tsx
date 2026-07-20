@@ -1,5 +1,6 @@
-import { PropertyPanelView } from "@/app/component/property-panel.component"
+import { PropertyPanelView, type TranslationUiState } from "@/app/component/property-panel.component"
 import { LoadStatus } from "@/app/config/load-status"
+import { useTranslator } from "@/app/hook/translation.hook"
 import {
   loadPropertyDetail,
   propertyContributeUrl,
@@ -16,10 +17,12 @@ type Props = {
   readonly onClose: () => void
 }
 
-/** Property panel logic — calls usecase only. */
+/** Property panel logic — calls usecase / hooks only. */
 export function PropertyPanel({ marker, onClose }: Props) {
   const [state, setState] = useState<PropertyLoadState>({ status: LoadStatus.Loading })
   const [brokenImages, setBrokenImages] = useState<ReadonlySet<string>>(() => new Set())
+  const [translation, setTranslation] = useState<TranslationUiState>({ status: "idle" })
+  const { showControl: showTranslate, translate, isTranslationError } = useTranslator()
   const onCloseEvent = useEffectEvent(onClose)
 
   useEffect(() => {
@@ -37,6 +40,7 @@ export function PropertyPanel({ marker, onClose }: Props) {
     let cancelled = false
     setState({ status: LoadStatus.Loading })
     setBrokenImages(new Set())
+    setTranslation({ status: "idle" })
 
     void Effect.runPromise(loadPropertyDetail(marker.key))
       .then((detail) => {
@@ -52,6 +56,25 @@ export function PropertyPanel({ marker, onClose }: Props) {
       cancelled = true
     }
   }, [marker.key])
+
+  const onTranslate = () => {
+    const info = state.status === LoadStatus.Ready ? state.detail.info : null
+    if (!info) return
+
+    setTranslation({ status: "loading" })
+    void translate(info)
+      .then((text) => {
+        setTranslation({ status: "ready", text })
+      })
+      .catch((cause) => {
+        const message = isTranslationError(cause)
+          ? cause.message
+          : cause instanceof Error && cause.message.length > 0
+            ? cause.message
+            : "Translation failed"
+        setTranslation({ status: "error", message })
+      })
+  }
 
   const sourceUrl =
     state.status === LoadStatus.Ready
@@ -77,7 +100,10 @@ export function PropertyPanel({ marker, onClose }: Props) {
       contributeUrl={contributeUrl}
       detail={detail}
       visibleImages={visibleImages}
+      translation={translation}
+      showTranslate={showTranslate}
       onClose={onClose}
+      onTranslate={onTranslate}
       onImageError={(url) => {
         setBrokenImages((prev) => {
           const next = new Set(prev)

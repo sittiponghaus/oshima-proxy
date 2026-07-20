@@ -88,9 +88,9 @@ export const cacheKeyMap = (keys: readonly string[]) => `map:${[...keys].slice()
 
 export const cacheKeyReport = (key: string) => `report:${key}`
 
-export const cacheKeyPlaceAutocomplete = (q: string) => `places:autocomplete:${q.trim().toLowerCase()}`
+export const cacheKeyPlaceAutocomplete = (q: string) => `places:autocomplete:en:${q.trim().toLowerCase()}`
 
-export const cacheKeyPlaceDetail = (placeId: string) => `places:details:${placeId.trim().toUpperCase()}`
+export const cacheKeyPlaceDetail = (placeId: string) => `places:details:en:${placeId.trim().toUpperCase()}`
 
 const notModified = (etag: string, kind: RouteCacheKind) =>
   HttpServerResponse.empty({
