@@ -4,6 +4,12 @@ import type { PropertyDetail } from "@/app/usecase/property.usecase"
 
 import { Spinner } from "./icon.component"
 
+export type TranslationUiState =
+  | { readonly status: "idle" }
+  | { readonly status: "loading" }
+  | { readonly status: "ready"; readonly text: string }
+  | { readonly status: "error"; readonly message: string }
+
 type Props = {
   readonly marker: MapMarker
   readonly state: PropertyLoadState
@@ -11,8 +17,11 @@ type Props = {
   readonly contributeUrl: string
   readonly detail: PropertyDetail | null
   readonly visibleImages: ReadonlyArray<{ readonly url: string }>
+  readonly translation: TranslationUiState
+  readonly showTranslate: boolean
   readonly onClose: () => void
   readonly onImageError: (url: string) => void
+  readonly onTranslate: () => void
 }
 
 /** Property detail panel UI (no fetch / usecase calls). */
@@ -23,8 +32,11 @@ export function PropertyPanelView({
   contributeUrl,
   detail,
   visibleImages,
+  translation,
+  showTranslate,
   onClose,
-  onImageError
+  onImageError,
+  onTranslate
 }: Props) {
   return (
     <dialog
@@ -119,6 +131,32 @@ export function PropertyPanelView({
               <section>
                 <h2 className="text-[0.65rem] font-semibold tracking-[0.14em] text-[var(--muted)] uppercase">Report</h2>
                 <p className="mt-1 whitespace-pre-wrap text-[var(--ink)] leading-relaxed">{detail.info}</p>
+                {showTranslate && translation.status === "ready" ? (
+                  <p className="mt-2 whitespace-pre-wrap border-t border-[var(--line)] pt-2 text-[var(--ink)] leading-relaxed">
+                    {translation.text}
+                  </p>
+                ) : null}
+                {showTranslate && translation.status === "error" ? (
+                  <p className="mt-2 text-xs text-[var(--ember)]">{translation.message}</p>
+                ) : null}
+                {showTranslate ? (
+                  <button
+                    type="button"
+                    className="mt-2 inline-flex items-center justify-center gap-2 border border-[var(--line)] px-3 py-1.5 text-xs font-medium text-[var(--ink)] hover:border-[var(--ember)] hover:text-[var(--ember)] disabled:cursor-wait disabled:opacity-60"
+                    disabled={translation.status === "loading"}
+                    onClick={onTranslate}>
+                    {translation.status === "loading" ? (
+                      <>
+                        <Spinner />
+                        Translating…
+                      </>
+                    ) : translation.status === "ready" ? (
+                      "Translate again"
+                    ) : (
+                      "Translate"
+                    )}
+                  </button>
+                ) : null}
               </section>
             ) : (
               <p className="text-xs text-[var(--muted)]">No report text in this record.</p>

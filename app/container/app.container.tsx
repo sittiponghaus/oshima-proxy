@@ -51,16 +51,7 @@ export function App() {
   const [status, setStatus] = useState<LoadStatus>(LoadStatus.Idle)
   const [selected, setSelected] = useState<MapMarker | null>(null)
   const [locationConsentOpen, setLocationConsentOpen] = useState(false)
-  const [aboutOpen, setAboutOpen] = useState(() =>
-    typeof window !== "undefined" ? window.matchMedia("(min-width: 768px)").matches : false
-  )
-
-  useEffect(() => {
-    const mq = window.matchMedia("(min-width: 768px)")
-    const sync = () => setAboutOpen(mq.matches)
-    mq.addEventListener("change", sync)
-    return () => mq.removeEventListener("change", sync)
-  }, [])
+  const [aboutOpen, setAboutOpen] = useState(false)
 
   const keysSignature = useMemo(() => {
     if (!viewport) return ""

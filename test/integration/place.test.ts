@@ -1,6 +1,5 @@
-import { beforeEach, describe, expect, test } from "@effect/vitest"
-
 import { clearRouteCacheMemory } from "@/server/runtime/response-cache"
+import { beforeEach, describe, expect, test } from "@effect/vitest"
 
 import { authorizedHeaders, bootstrapCsrf, createApiHandler } from "./helpers/app-handler"
 
@@ -32,6 +31,8 @@ describe("places integration", () => {
     const handler = createApiHandler({
       upstream: (request) => {
         expect(request.url).toContain("nominatim.openstreetmap.org/search")
+        expect(request.url).toContain("accept-language=en")
+        expect(request.headers["accept-language"]).toBe("en")
         return new Response(
           JSON.stringify([
             {
@@ -72,6 +73,8 @@ describe("places integration", () => {
       upstream: (request) => {
         expect(request.url).toContain("nominatim.openstreetmap.org/lookup")
         expect(request.url).toContain("osm_ids=N42")
+        expect(request.url).toContain("accept-language=en")
+        expect(request.headers["accept-language"]).toBe("en")
         return new Response(
           JSON.stringify([
             {

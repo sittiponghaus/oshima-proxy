@@ -17,8 +17,8 @@ describe("cache keys", () => {
   })
 
   test("normalizes places keys", () => {
-    expect(cacheKeyPlaceAutocomplete("  Tokyo ")).toBe("places:autocomplete:tokyo")
-    expect(cacheKeyPlaceDetail("n123")).toBe("places:details:N123")
+    expect(cacheKeyPlaceAutocomplete("  Tokyo ")).toBe("places:autocomplete:en:tokyo")
+    expect(cacheKeyPlaceDetail("n123")).toBe("places:details:en:N123")
     expect(cacheKeyReport("abc")).toBe("report:abc")
   })
 })
