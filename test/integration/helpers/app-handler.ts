@@ -48,13 +48,7 @@ export const createApiHandler = (options: {
   readonly upstream: UpstreamHandler
   readonly env?: Parameters<typeof createTestEnvLayer>[0]
 }) => {
-  const app = Layer.mergeAll(
-    CsrfRouteLive,
-    MapRouteLive,
-    PlaceRouteLive,
-    PropertyRouteLive,
-    ApiSecurityLive
-  ).pipe(
+  const app = Layer.mergeAll(CsrfRouteLive, MapRouteLive, PlaceRouteLive, PropertyRouteLive, ApiSecurityLive).pipe(
     Layer.provideMerge(createStubHttpClientLayer(options.upstream)),
     Layer.provideMerge(createTestEnvLayer(options.env))
   )
@@ -66,9 +60,7 @@ export const bootstrapCsrf = async (handler: (request: Request) => Promise<Respo
   const json = (await response.json()) as { token: string; header: string }
   const setCookie = response.headers.getSetCookie?.() ?? []
   const cookieHeader =
-    setCookie.length > 0
-      ? setCookie.map((part) => part.split(";")[0]!).join("; ")
-      : `${CSRF_COOKIE}=${json.token}`
+    setCookie.length > 0 ? setCookie.map((part) => part.split(";")[0]!).join("; ") : `${CSRF_COOKIE}=${json.token}`
   return { token: json.token, cookieHeader, headerName: json.header || CSRF_HEADER }
 }
 

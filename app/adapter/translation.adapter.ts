@@ -1,6 +1,9 @@
 /**
  * Browser Translator API adapter (Chrome built-in AI) as Effect + Context.Service.
  *
+ * Public surface: `TranslatorApi` + `TranslatorApi.Live`.
+ * Provide via `TranslatorApiRuntime` at the UI / test edge.
+ *
  * @see https://developer.chrome.com/docs/ai/translator-api
  */
 import { Context, Effect, Layer, Schema } from "effect"
@@ -46,8 +49,6 @@ const getTranslatorConstructor = (): object | null => {
   }
   return candidate
 }
-
-export const isTranslatorApiPresentAdapter = (): boolean => getTranslatorConstructor() !== null
 
 type TranslatorInstance = {
   readonly translate: (input: string) => Promise<string>
@@ -114,9 +115,7 @@ const acquireTranslator = (pair: TranslationLanguagePair, onDownloadProgress?: (
       })
   )
 
-export const checkTranslatorAvailabilityAdapter = Effect.fn("translation.adapter.checkAvailability")(function* (
-  pair: TranslationLanguagePair
-) {
+const checkAvailability = Effect.fn("TranslatorApi.checkAvailability")(function* (pair: TranslationLanguagePair) {
   const api = getTranslatorConstructor()
   if (!api) {
     return TranslationAvailabilityStatus.Unavailable
@@ -146,14 +145,13 @@ export const checkTranslatorAvailabilityAdapter = Effect.fn("translation.adapter
   )
 })
 
-export const translateTextAdapter = Effect.fn("translation.adapter.translateText")(function* (
+const translate = Effect.fn("TranslatorApi.translate")(function* (
   text: string,
-  pair: TranslationLanguagePair,
-  onDownloadProgress?: (loaded: number) => void
+  pair: TranslationLanguagePair
 ) {
   return yield* Effect.scoped(
     Effect.gen(function* () {
-      const translator = yield* acquireTranslator(pair, onDownloadProgress)
+      const translator = yield* acquireTranslator(pair)
       const result = yield* Effect.tryPromise({
         try: () => translator.translate(text),
         catch: (cause) =>
@@ -170,6 +168,17 @@ export const translateTextAdapter = Effect.fn("translation.adapter.translateText
   )
 })
 
+/** Sync feature-detect for UI gates (no Effect / Layer required). */
+export function isTranslatorApiPresent(): boolean {
+  return getTranslatorConstructor() !== null
+}
+
+/**
+ * Browser Translator API service.
+ *
+ * Yield with `yield* TranslatorApi`; provide `TranslatorApi.Live` via
+ * `TranslatorApiRuntime` at the UI / test edge.
+ */
 export class TranslatorApi extends Context.Service<
   TranslatorApi,
   {
@@ -181,8 +190,8 @@ export class TranslatorApi extends Context.Service<
   }
 >()("TranslatorApi") {
   static readonly Live = Layer.succeed(TranslatorApi)({
-    isPresent: isTranslatorApiPresentAdapter,
-    checkAvailability: checkTranslatorAvailabilityAdapter,
-    translate: (text, pair) => translateTextAdapter(text, pair)
+    isPresent: isTranslatorApiPresent,
+    checkAvailability,
+    translate
   })
 }

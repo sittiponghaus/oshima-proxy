@@ -1,19 +1,22 @@
 /**
  * React bindings for translation usecase (Translator API availability + translate).
- * Mirrors geolocation.hook: feature-detect, hide control when unsupported.
+ * Availability via useQuery; translate via ensureQueryData.
  */
 import {
-  checkTranslationAvailability,
+  ensureTranslationQueryData,
+  translationAvailabilityQueryOptions
+} from "@/app/query/domain.query"
+import {
   DEFAULT_TRANSLATION_PAIR,
   isTranslatorSupported,
   shouldShowTranslateControl,
-  translateDescription,
   TranslationAvailabilityStatus,
   TranslationError,
   type TranslationLanguagePair
 } from "@/app/usecase/translation.usecase"
-import { Effect, Predicate } from "effect"
-import { useCallback, useEffect, useState } from "react"
+import { useQuery } from "@tanstack/react-query"
+import { Predicate } from "effect"
+import { useCallback, useMemo } from "react"
 
 export {
   isTranslatorSupported,
@@ -37,38 +40,34 @@ function isTranslationError(error: unknown): error is TranslationError {
  * Returns `showControl` so the Translate button is only rendered when usable.
  */
 export function useTranslator(pair: TranslationLanguagePair = DEFAULT_TRANSLATION_PAIR) {
-  const [support, setSupport] = useState<TranslatorSupportState>({ status: "checking" })
+  const supported = isTranslatorSupported()
+  const availabilityQuery = useQuery({
+    ...translationAvailabilityQueryOptions(pair),
+    enabled: supported
+  })
 
-  useEffect(() => {
-    if (!isTranslatorSupported()) {
-      setSupport({ status: "unsupported" })
-      return
+  const support: TranslatorSupportState = useMemo(() => {
+    if (!supported) return { status: "unsupported" }
+    if (availabilityQuery.isPending || availabilityQuery.isFetching) {
+      return { status: "checking" }
     }
-
-    let cancelled = false
-    setSupport({ status: "checking" })
-
-    void Effect.runPromise(checkTranslationAvailability(pair))
-      .then((availability) => {
-        if (cancelled) return
-        if (!shouldShowTranslateControl(availability)) {
-          setSupport({ status: "unsupported" })
-          return
-        }
-        setSupport({ status: "ready", availability })
-      })
-      .catch(() => {
-        if (cancelled) return
-        setSupport({ status: "unsupported" })
-      })
-
-    return () => {
-      cancelled = true
+    if (availabilityQuery.isError || !availabilityQuery.data) {
+      return { status: "unsupported" }
     }
-  }, [pair.sourceLanguage, pair.targetLanguage])
+    if (!shouldShowTranslateControl(availabilityQuery.data)) {
+      return { status: "unsupported" }
+    }
+    return { status: "ready", availability: availabilityQuery.data }
+  }, [
+    availabilityQuery.data,
+    availabilityQuery.isError,
+    availabilityQuery.isFetching,
+    availabilityQuery.isPending,
+    supported
+  ])
 
   const translate = useCallback(
-    (text: string) => Effect.runPromise(translateDescription(text, pair)),
+    (text: string) => ensureTranslationQueryData(text, pair),
     [pair.sourceLanguage, pair.targetLanguage]
   )
 

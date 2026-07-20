@@ -1,7 +1,6 @@
-import { describe, expect, test } from "@effect/vitest"
-
 import { LoadStatus } from "@/app/config/load-status"
 import { PropertyError } from "@/app/repository/property.repository"
+import { describe, expect, test } from "@effect/vitest"
 
 import { propertyLoadErrorFromCause, propertySourceUrl } from "./property.usecase"
 

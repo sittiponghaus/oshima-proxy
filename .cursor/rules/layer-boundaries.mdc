@@ -10,8 +10,10 @@ alwaysApply: false
 
 - `app/` **never** imports from `server/` (directly or via `@/server/...`).
 - Shared contracts live in `shared/` (HTTP helpers, Oshima schemas, quadkeys).
-- Browser HTTP lives in `app/adapter/http.adapter.ts` (one adapter kind; auth variant = separate `*.adapter.ts`, not a provider folder).
-- Browser persistence lives in `app/adapter/localstorage.adapter.ts` (Effect `KeyValueStore` + sync helpers for Atom stores).
+- Browser HTTP lives in `app/adapter/http.adapter.ts` (`ApiHttp` Context.Service + `BrowserHttpClient`; provide `ApiHttp.Live` via `app/runtime/api-http.runtime.ts`).
+- Browser Translator API lives in `app/adapter/translation.adapter.ts` (`TranslatorApi`; provide via `app/runtime/translator-api.runtime.ts`).
+- Browser persistence + geolocation live in `app/store` via `Atom.kvs` / `browserAtomRuntime` (`BrowserKeyValueStore` + `Geolocation`).
+- Domain TanStack Query options live in `app/query/domain.query.ts` (subscribe with `useQuery`, imperatively `ensureQueryData`).
 - Domain HTTP calls + mapping live in `app/repository/`.
 - `server/controller/http/*.http.ts` is Worker/upstream only.
 - Enforce with `bun run check:boundaries`.
@@ -19,13 +21,14 @@ alwaysApply: false
 ## Data flow
 
 ```
-container ← usecase mapper (domain → container shape)
+container/hook ← useQuery / ensureQueryData (app/query) + usecase
     ↑
-usecase   ← calls repository only
+usecase   ← repository (HTTP/Translator) or store (Atom.kvs / Geolocation)
     ↑
-repository ← wraps http.adapter + repository mapper (wire → domain)
+repository ← yield* ApiHttp / TranslatorApi + domain mapping
+store      ← browserAtomRuntime (KeyValueStore + Geolocation)
     ↑
-app/adapter/http.adapter.ts or shared
+app/adapter/*.adapter.ts (Context.Service + Layer)
 ```
 
-Both `usecase/` and `repository/` may own their own mapper when shapes differ. Do not map container shapes inside adapters or repositories beyond domain, and do not call repositories from components.
+Provide Layers only at the runtime edge (`ManagedRuntime` / `Atom.runtime`). Do not `Effect.provide` inside adapters, repositories, or stores. Usecase never imports adapters directly.

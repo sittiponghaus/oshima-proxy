@@ -15,11 +15,12 @@ import {
 } from "@/app/hook/geolocation.hook"
 import { useMapViewport } from "@/app/hook/map-viewport.hook"
 import { useTheme } from "@/app/hook/theme.hook"
-import { loadMapTile, mapTileKeySignature, type MapCluster, type MapMarker } from "@/app/usecase/map-tile.usecase"
+import { mapTileQueryOptions } from "@/app/query/domain.query"
+import { mapTileKeySignature, type MapCluster, type MapMarker } from "@/app/usecase/map-tile.usecase"
 import type { PlaceResult } from "@/app/usecase/place.usecase"
+import { useQuery } from "@tanstack/react-query"
 import { useDebounce } from "@uidotdev/usehooks"
 import { type MapRef } from "@vis.gl/react-maplibre"
-import { Effect } from "effect"
 import type { Map as MaplibreMap } from "maplibre-gl"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
@@ -40,15 +41,12 @@ function viewportFromMap(map: MaplibreMap): Viewport {
   }
 }
 
-/** Root map app logic — calls hooks/usecases only; renders components. */
+/** Root map app logic — calls hooks/queries only; renders components. */
 export function App() {
   const mapRef = useRef<MapRef>(null)
   const { setStoredViewport, initialViewState } = useMapViewport()
   const { theme, toggleTheme, mapStyle } = useTheme()
   const [viewport, setViewport] = useState<Viewport | null>(null)
-  const [markers, setMarkers] = useState<MapMarker[]>([])
-  const [clusters, setClusters] = useState<MapCluster[]>([])
-  const [status, setStatus] = useState<LoadStatus>(LoadStatus.Idle)
   const [selected, setSelected] = useState<MapMarker | null>(null)
   const [locationConsentOpen, setLocationConsentOpen] = useState(false)
   const [aboutOpen, setAboutOpen] = useState(false)
@@ -59,28 +57,16 @@ export function App() {
   }, [viewport])
   const debouncedKeysSignature = useDebounce(keysSignature, 180)
 
-  useEffect(() => {
-    if (!debouncedKeysSignature) return
-
-    let cancelled = false
-    setStatus(LoadStatus.Loading)
-
-    void Effect.runPromise(loadMapTile(debouncedKeysSignature))
-      .then((result) => {
-        if (cancelled) return
-        setMarkers(result.markers)
-        setClusters(result.clusters)
-        setStatus(LoadStatus.Ready)
-      })
-      .catch(() => {
-        if (cancelled) return
-        setStatus(LoadStatus.Error)
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [debouncedKeysSignature])
+  const mapTileQuery = useQuery(mapTileQueryOptions(debouncedKeysSignature))
+  const markers = mapTileQuery.data?.markers ?? []
+  const clusters = mapTileQuery.data?.clusters ?? []
+  const status: LoadStatus = !debouncedKeysSignature
+    ? LoadStatus.Idle
+    : mapTileQuery.isPending || mapTileQuery.isFetching
+      ? LoadStatus.Loading
+      : mapTileQuery.isError
+        ? LoadStatus.Error
+        : LoadStatus.Ready
 
   const syncViewport = useCallback(() => {
     const map = mapRef.current?.getMap()

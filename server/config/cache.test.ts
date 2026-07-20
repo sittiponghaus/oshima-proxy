@@ -1,13 +1,7 @@
 import { describe, expect, test } from "@effect/vitest"
 import { Effect } from "effect"
 
-import {
-  ROUTE_CACHE_POLICY,
-  cacheControlFor,
-  matchesIfNoneMatch,
-  strongEtag,
-  ttlMsFor
-} from "./cache"
+import { ROUTE_CACHE_POLICY, cacheControlFor, matchesIfNoneMatch, strongEtag, ttlMsFor } from "./cache"
 
 describe("ROUTE_CACHE_POLICY", () => {
   test("exposes TTLs in seconds", () => {

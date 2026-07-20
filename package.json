@@ -23,6 +23,8 @@
   },
   "dependencies": {
     "@effect/atom-react": "4.0.0-beta.99",
+    "@effect/platform-browser": "^4.0.0-beta.99",
+    "@tanstack/react-query": "^5.101.3",
     "@uidotdev/usehooks": "^2.4.1",
     "@vis.gl/react-maplibre": "^8.1.1",
     "effect": "^4.0.0-beta.99",

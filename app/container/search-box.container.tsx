@@ -1,14 +1,12 @@
 import { SearchBoxView } from "@/app/component/search-box.component"
 import {
-  resolvePlaceSelection,
-  searchPlace,
-  shouldSearchPlace,
-  type PlaceResult,
-  type PlaceSuggestion
-} from "@/app/usecase/place.usecase"
+  ensurePlaceSelectionQueryData,
+  placeSearchQueryOptions
+} from "@/app/query/domain.query"
+import { shouldSearchPlace, type PlaceResult, type PlaceSuggestion } from "@/app/usecase/place.usecase"
+import { useQuery } from "@tanstack/react-query"
 import { useDebounce } from "@uidotdev/usehooks"
-import { Effect } from "effect"
-import { useCallback, useEffect, useId, useRef, useState } from "react"
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 
 export type { PlaceResult, PlaceSuggestion }
 
@@ -16,50 +14,38 @@ type Props = {
   readonly onSelect: (place: PlaceResult) => void
 }
 
-/** Places search logic — calls usecase only. */
+/** Places search logic — TanStack Query + ensureQueryData for selection. */
 export function SearchBox({ onSelect }: Props) {
   const listId = useId()
   const [query, setQuery] = useState("")
   const debouncedQuery = useDebounce(query, 350)
-  const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([])
   const [open, setOpen] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [selectionBusy, setSelectionBusy] = useState(false)
+  const [selectionError, setSelectionError] = useState<string | null>(null)
   const [active, setActive] = useState(0)
   const wrapRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
+  const searchQuery = useQuery(placeSearchQueryOptions(debouncedQuery))
+  const suggestions = useMemo(
+    () => (shouldSearchPlace(debouncedQuery) ? (searchQuery.data ?? []) : []),
+    [debouncedQuery, searchQuery.data]
+  )
+  const busy = searchQuery.isFetching || selectionBusy
+  const error =
+    selectionError ??
+    (searchQuery.isError
+      ? searchQuery.error instanceof Error
+        ? searchQuery.error.message
+        : String(searchQuery.error)
+      : null)
+
   useEffect(() => {
-    if (!shouldSearchPlace(debouncedQuery)) {
-      setSuggestions([])
-      setError(null)
-      return
+    if (suggestions.length > 0) {
+      setOpen(true)
+      setActive(0)
     }
-
-    let cancelled = false
-    setBusy(true)
-    setError(null)
-
-    void Effect.runPromise(searchPlace(debouncedQuery))
-      .then((next) => {
-        if (cancelled) return
-        setSuggestions(next)
-        setOpen(true)
-        setActive(0)
-      })
-      .catch((cause) => {
-        if (cancelled) return
-        setSuggestions([])
-        setError(cause instanceof Error ? cause.message : String(cause))
-      })
-      .finally(() => {
-        if (!cancelled) setBusy(false)
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [debouncedQuery])
+  }, [suggestions])
 
   useEffect(() => {
     const onPointer = (event: PointerEvent) => {
@@ -73,17 +59,17 @@ export function SearchBox({ onSelect }: Props) {
     (suggestion: PlaceSuggestion) => {
       setQuery(suggestion.mainText || suggestion.label)
       setOpen(false)
-      setError(null)
-      setBusy(true)
-      void Effect.runPromise(resolvePlaceSelection(suggestion))
+      setSelectionError(null)
+      setSelectionBusy(true)
+      void ensurePlaceSelectionQueryData(suggestion)
         .then((place) => {
           onSelect(place)
         })
         .catch((cause) => {
-          setError(cause instanceof Error ? cause.message : String(cause))
+          setSelectionError(cause instanceof Error ? cause.message : String(cause))
         })
         .finally(() => {
-          setBusy(false)
+          setSelectionBusy(false)
         })
     },
     [onSelect]
@@ -91,9 +77,8 @@ export function SearchBox({ onSelect }: Props) {
 
   const clear = useCallback(() => {
     setQuery("")
-    setSuggestions([])
     setOpen(false)
-    setError(null)
+    setSelectionError(null)
     inputRef.current?.focus()
   }, [])
 
