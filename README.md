@@ -114,6 +114,8 @@ bun run deploy:version
 bun run deploy:preview
 # After the git branch is gone, delete its Workers Preview:
 bun run preview:delete -- <branch-name>
+# Or rely on CI: `.github/workflows/delete-preview.yml` runs that on branch delete
+# (workflow must be on `main`; needs CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID).
 # optional secrets when using a browser UA:
 # wrangler secret put OSHIMA_COOKIE
 # wrangler secret put OSHIMA_USER_AGENT
