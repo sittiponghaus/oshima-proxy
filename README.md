@@ -108,8 +108,12 @@ bun run dev                  # wrangler dev (Workers + assets)
 
 ```bash
 bun run deploy
-# Preview upload only (no production traffic / no multi-version split):
+# Release version upload (package.json tag, no production traffic split):
 bun run deploy:version
+# Branch preview (tag + --preview-alias from git branch):
+bun run deploy:preview
+# After the git branch is gone, delete its Workers Preview:
+bun run preview:delete -- <branch-name>
 # optional secrets when using a browser UA:
 # wrangler secret put OSHIMA_COOKIE
 # wrangler secret put OSHIMA_USER_AGENT
@@ -150,7 +154,7 @@ bun run fmt:check
 app/           React CSR (adapter → repository → usecase → container → component)
 server/        Worker routes, middleware, cache, env
 shared/        Cross-boundary contracts
-cmd/           worker.ts · check-boundaries · prepare-effect
+cmd/           worker.ts · check-boundaries · prepare-effect · deploy/delete-preview
 test/          integration/ only (unit tests are colocated)
 public/        _headers for Workers Assets CSP
 ```

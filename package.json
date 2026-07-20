@@ -10,6 +10,8 @@
     "build": "bun run build.ts",
     "deploy": "bun run build && wrangler deploy",
     "deploy:version": "bun run build && wrangler versions upload --tag \"$npm_package_version\"",
+    "deploy:preview": "./cmd/deploy-preview.sh",
+    "preview:delete": "./cmd/delete-preview.sh",
     "cf:typegen": "wrangler types",
     "fmt:write": "oxfmt --write \"**/*.{ts,tsx,js,jsx}\"",
     "fmt:check": "oxfmt --check \"**/*.{ts,tsx,js,jsx}\"",
