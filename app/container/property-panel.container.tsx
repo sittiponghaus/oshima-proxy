@@ -8,6 +8,7 @@ import {
   type MapMarker,
   type PropertyLoadState
 } from "@/app/usecase/property.usecase"
+import { Effect } from "effect"
 import { useEffect, useEffectEvent, useState } from "react"
 
 type Props = {
@@ -37,7 +38,7 @@ export function PropertyPanel({ marker, onClose }: Props) {
     setState({ status: LoadStatus.Loading })
     setBrokenImages(new Set())
 
-    void loadPropertyDetail(marker.key)
+    void Effect.runPromise(loadPropertyDetail(marker.key))
       .then((detail) => {
         if (cancelled) return
         setState({ status: LoadStatus.Ready, detail })

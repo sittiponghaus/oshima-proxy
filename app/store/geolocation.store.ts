@@ -1,3 +1,4 @@
+import { localStorageAdapter } from "@/app/adapter/localstorage.adapter"
 import { Effect, Schema } from "effect"
 import type * as AsyncResult from "effect/unstable/reactivity/AsyncResult"
 import * as Atom from "effect/unstable/reactivity/Atom"
@@ -99,7 +100,7 @@ function getCurrentUserLocation(): Effect.Effect<UserLocation, LocationPermissio
 export const requestLocationStateAtom: Atom.Writable<RequestLocationState> = Atom.writable(
   (): RequestLocationState => ReadStoredRequestLocationState(),
   (ctx, state: RequestLocationState) => {
-    WriteLocalStorageItem(RequestStateLocationLocalStorageKey, state)
+    localStorageAdapter.setItemSync(RequestStateLocationLocalStorageKey, state)
     ctx.setSelf(state)
   }
 ).pipe(Atom.keepAlive)
@@ -143,17 +144,17 @@ export const locationAtom: Atom.Atom<AsyncResult.AsyncResult<UserLocation | null
  * fetched value; storage seeds the next cold read / disabled path).
  */
 export const persistLocationAtom = Atom.fnSync((location: UserLocation) => {
-  WriteLocalStorageItem(LocationLocalStorageKey, JSON.stringify(location))
+  localStorageAdapter.setItemSync(LocationLocalStorageKey, JSON.stringify(location))
   return location
 })
 
 function ReadStoredRequestLocationState(): RequestLocationState {
-  const item = ReadLocalStorageItem(RequestStateLocationLocalStorageKey)
+  const item = localStorageAdapter.getItemSync(RequestStateLocationLocalStorageKey)
   return IsRequestLocationState(item) ? item : RequestLocationState.NEVER_ASK
 }
 
 function ReadStoredLocation(): UserLocation | null {
-  const item = ReadLocalStorageItem(LocationLocalStorageKey)
+  const item = localStorageAdapter.getItemSync(LocationLocalStorageKey)
   if (!item) return null
 
   try {
@@ -161,16 +162,6 @@ function ReadStoredLocation(): UserLocation | null {
   } catch {
     return null
   }
-}
-
-function ReadLocalStorageItem(key: string): string | null {
-  if (typeof localStorage === "undefined") return null
-  return localStorage.getItem(key)
-}
-
-function WriteLocalStorageItem(key: string, value: string): void {
-  if (typeof localStorage === "undefined") return
-  localStorage.setItem(key, value)
 }
 
 function IsRequestLocationState(input: string | null): input is RequestLocationState {

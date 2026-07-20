@@ -11,7 +11,7 @@ import {
   propertyContributeUrl,
   propertySourceUrl
 } from "@/shared/oshima/schema"
-import { Effect, Layer, Schema } from "effect"
+import { Effect, Layer, Result, Schema } from "effect"
 import { HttpClient, HttpClientRequest, HttpRouter, HttpServerResponse } from "effect/unstable/http"
 
 import { name, version } from "package.json"
@@ -105,12 +105,14 @@ export const PropertyRouteLive = Layer.effectDiscard(
               // EN miss (404) should fall through to JP before giving up.
               if (response.status < 200 || response.status >= 300) continue
 
-              let parsed: unknown
-              try {
-                parsed = JSON.parse(text)
-              } catch {
-                continue
-              }
+              const parseResult = yield* Effect.result(
+                Effect.try({
+                  try: (): unknown => JSON.parse(text),
+                  catch: (cause) => cause
+                })
+              )
+              if (!Result.isSuccess(parseResult)) continue
+              const parsed = Result.getOrElse(parseResult, (): unknown => undefined)
 
               const decoded = yield* Schema.decodeUnknownEffect(PropertyUpstream)(parsed).pipe(
                 Effect.catch(() => Effect.succeed(null))

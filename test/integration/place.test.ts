@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "bun:test"
+import { beforeEach, describe, expect, test } from "@effect/vitest"
 
 import { clearRouteCacheMemory } from "@/server/runtime/response-cache"
 

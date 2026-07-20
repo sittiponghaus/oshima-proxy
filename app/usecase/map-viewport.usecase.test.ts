@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, test } from "@effect/vitest"
 
 import { DEFAULT_VIEW_STATE, resolveInitialViewState } from "./map-viewport.usecase"
 

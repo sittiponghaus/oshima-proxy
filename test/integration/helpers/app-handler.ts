@@ -2,10 +2,10 @@
  * In-process API handler with a stub upstream HttpClient.
  */
 import { Environment } from "@/server/config/environment"
-import { CsrfRouteLive } from "@/server/adapter/csrf-route"
-import { MapRouteLive } from "@/server/adapter/map-route"
-import { PlacesRouteLive } from "@/server/adapter/places-route"
-import { PropertyRouteLive } from "@/server/adapter/property-route"
+import { CsrfRouteLive } from "@/server/controller/http/csrf.http"
+import { MapRouteLive } from "@/server/controller/http/map.http"
+import { PlaceRouteLive } from "@/server/controller/http/place.http"
+import { PropertyRouteLive } from "@/server/controller/http/property.http"
 import { ApiSecurityLive } from "@/server/runtime/security-middleware"
 import { CLIENT_HEADER, CLIENT_HEADER_VALUE, CSRF_COOKIE, CSRF_HEADER } from "@/shared/http/security"
 import { Effect, Layer } from "effect"
@@ -38,7 +38,6 @@ export const createTestEnvLayer = (
   Layer.succeed(
     Environment,
     Environment.of({
-      port: 0,
       oshimaCookie: overrides.oshimaCookie,
       oshimaUserAgent: overrides.oshimaUserAgent,
       deployVersion: overrides.deployVersion
@@ -52,7 +51,7 @@ export const createApiHandler = (options: {
   const app = Layer.mergeAll(
     CsrfRouteLive,
     MapRouteLive,
-    PlacesRouteLive,
+    PlaceRouteLive,
     PropertyRouteLive,
     ApiSecurityLive
   ).pipe(

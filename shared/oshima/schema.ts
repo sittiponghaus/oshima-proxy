@@ -31,11 +31,11 @@ export const MapRequest = Schema.Struct({
 })
 export type MapRequest = typeof MapRequest.Type
 
-export function flattenMarkers(response: MapResponse): MapMarker[] {
+export function flattenMarker(response: MapResponse): MapMarker[] {
   return Object.values(response.markers).flat()
 }
 
-export function flattenClusters(response: MapResponse): MapCluster[] {
+export function flattenCluster(response: MapResponse): MapCluster[] {
   return Object.values(response.clusters).flat()
 }
 

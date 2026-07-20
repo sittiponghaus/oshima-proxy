@@ -2,7 +2,7 @@ import { LoadStatus } from "@/app/config/load-status"
 import type { MapMarker, PropertyLoadState } from "@/app/usecase/property.usecase"
 import type { PropertyDetail } from "@/app/usecase/property.usecase"
 
-import { Spinner } from "./icons.component"
+import { Spinner } from "./icon.component"
 
 type Props = {
   readonly marker: MapMarker

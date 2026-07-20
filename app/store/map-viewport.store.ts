@@ -4,6 +4,7 @@
  * geolocation atoms, which persist the user's detected coordinates separately —
  * this only tracks where the map camera was left.
  */
+import { localStorageAdapter } from "@/app/adapter/localstorage.adapter"
 import * as Atom from "effect/unstable/reactivity/Atom"
 
 export interface StoredViewport {
@@ -27,14 +28,14 @@ export const mapViewportAtom: Atom.Writable<StoredViewport | null> = Atom.writab
   (): StoredViewport | null => ReadStoredViewport(),
   (ctx, viewport: StoredViewport | null) => {
     if (viewport) {
-      WriteLocalStorageItem(MapViewportLocalStorageKey, JSON.stringify(viewport))
+      localStorageAdapter.setItemSync(MapViewportLocalStorageKey, JSON.stringify(viewport))
     }
     ctx.setSelf(viewport)
   }
 ).pipe(Atom.keepAlive)
 
 function ReadStoredViewport(): StoredViewport | null {
-  const item = ReadLocalStorageItem(MapViewportLocalStorageKey)
+  const item = localStorageAdapter.getItemSync(MapViewportLocalStorageKey)
   if (!item) return null
 
   try {
@@ -53,14 +54,4 @@ function IsStoredViewport(input: unknown): input is StoredViewport {
     typeof candidate.latitude === "number" &&
     typeof candidate.zoom === "number"
   )
-}
-
-function ReadLocalStorageItem(key: string): string | null {
-  if (typeof localStorage === "undefined") return null
-  return localStorage.getItem(key)
-}
-
-function WriteLocalStorageItem(key: string, value: string): void {
-  if (typeof localStorage === "undefined") return
-  localStorage.setItem(key, value)
 }

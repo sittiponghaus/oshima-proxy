@@ -1,6 +1,6 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, test } from "@effect/vitest"
 
-import { mapSuggestionToPlaceResult, type PlaceSuggestion } from "./places.repository"
+import { mapSuggestionToPlaceResult, type PlaceSuggestion } from "./place.repository"
 
 const base: PlaceSuggestion = {
   placeId: "N1",

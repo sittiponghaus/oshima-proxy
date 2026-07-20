@@ -4,6 +4,7 @@
  * Default (no saved value): follow `prefers-color-scheme`; if that API is
  * unavailable, fall back to `"dark"` (the previous always-on look).
  */
+import { localStorageAdapter } from "@/app/adapter/localstorage.adapter"
 import * as Atom from "effect/unstable/reactivity/Atom"
 
 export type Theme = "dark" | "light"
@@ -45,13 +46,13 @@ export function applyThemeToDocument(theme: Theme): void {
 export const themeAtom: Atom.Writable<Theme> = Atom.writable(
   (): Theme => resolveTheme(),
   (ctx, theme: Theme) => {
-    WriteLocalStorageItem(ThemeLocalStorageKey, theme)
+    localStorageAdapter.setItemSync(ThemeLocalStorageKey, theme)
     ctx.setSelf(theme)
   }
 ).pipe(Atom.keepAlive)
 
 function ReadStoredTheme(): Theme | null {
-  const item = ReadLocalStorageItem(ThemeLocalStorageKey)
+  const item = localStorageAdapter.getItemSync(ThemeLocalStorageKey)
   return IsTheme(item) ? item : null
 }
 
@@ -64,14 +65,4 @@ function prefersColorSchemeTheme(): Theme | null {
     return null
   }
   return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"
-}
-
-function ReadLocalStorageItem(key: string): string | null {
-  if (typeof localStorage === "undefined") return null
-  return localStorage.getItem(key)
-}
-
-function WriteLocalStorageItem(key: string, value: string): void {
-  if (typeof localStorage === "undefined") return
-  localStorage.setItem(key, value)
 }

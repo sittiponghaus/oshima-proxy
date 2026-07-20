@@ -1,9 +1,9 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, test } from "@effect/vitest"
 
 import {
   PHOTO_BASE,
-  flattenClusters,
-  flattenMarkers,
+  flattenCluster,
+  flattenMarker,
   mergeMapResponses,
   normalizeProperty,
   propertyContributeUrl,
@@ -33,11 +33,11 @@ const sampleMap = (): MapResponse => ({
   }
 })
 
-describe("flattenMarkers / flattenClusters", () => {
+describe("flattenMarker / flattenCluster", () => {
   test("flattens record buckets into arrays", () => {
     const response = sampleMap()
-    expect(flattenMarkers(response).map((m) => m.key)).toEqual(["m1", "m2"])
-    expect(flattenClusters(response)).toHaveLength(1)
+    expect(flattenMarker(response).map((m) => m.key)).toEqual(["m1", "m2"])
+    expect(flattenCluster(response)).toHaveLength(1)
   })
 })
 

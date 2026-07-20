@@ -1,4 +1,4 @@
-import { cacheKeyPlacesAutocomplete, cacheKeyPlacesDetails, withRouteCache } from "@/server/runtime/response-cache"
+import { cacheKeyPlaceAutocomplete, cacheKeyPlaceDetail, withRouteCache } from "@/server/runtime/response-cache"
 import { apiPath } from "@/shared/http/api"
 import { Effect, Layer, Schema } from "effect"
 import {
@@ -74,7 +74,7 @@ const toSuggestion = (row: typeof NominatimResult.Type) => {
   }
 }
 
-export const PlacesRouteLive = Layer.effectDiscard(
+export const PlaceRouteLive = Layer.effectDiscard(
   Effect.gen(function* () {
     const router = yield* HttpRouter.HttpRouter
 
@@ -92,7 +92,7 @@ export const PlacesRouteLive = Layer.effectDiscard(
 
         return yield* withRouteCache({
           kind: "places",
-          cacheKey: cacheKeyPlacesAutocomplete(q),
+          cacheKey: cacheKeyPlaceAutocomplete(q),
           load: Effect.gen(function* () {
             const endpoint = new URL(NOMINATIM_SEARCH)
             endpoint.searchParams.set("q", q)
@@ -140,7 +140,7 @@ export const PlacesRouteLive = Layer.effectDiscard(
 
         return yield* withRouteCache({
           kind: "places",
-          cacheKey: cacheKeyPlacesDetails(placeId),
+          cacheKey: cacheKeyPlaceDetail(placeId),
           load: Effect.gen(function* () {
             const endpoint = new URL(NOMINATIM_LOOKUP)
             endpoint.searchParams.set("osm_ids", osmIds)

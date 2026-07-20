@@ -9,7 +9,7 @@ import {
   CSRF_HEADER,
   timingSafeEqual
 } from "@/shared/http/security"
-import { Effect, Layer, Option } from "effect"
+import { Effect, Layer, Option, Result } from "effect"
 import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/unstable/http"
 
 const jsonForbidden = (error: string) => HttpServerResponse.jsonUnsafe({ error }, { status: 403 })
@@ -34,11 +34,10 @@ const isSameOrigin = (request: HttpServerRequest.HttpServerRequest): boolean => 
 
   const referer = request.headers["referer"]
   if (referer) {
-    try {
-      return new URL(referer).origin === selfOrigin
-    } catch {
-      return false
-    }
+    return Result.match(Result.try(() => new URL(referer).origin), {
+      onFailure: () => false,
+      onSuccess: (origin) => origin === selfOrigin
+    })
   }
 
   return request.method === "GET" || request.method === "HEAD"

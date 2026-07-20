@@ -1,7 +1,7 @@
 import { GITHUB_REPO_URL, OSHIMALAND_SITE_URL } from "@/app/config/site"
 import type { ReactNode } from "react"
 
-import { ChevronIcon, LocationCrosshairIcon, MoonIcon, SunIcon } from "./icons.component"
+import { ChevronIcon, LocationCrosshairIcon, MoonIcon, SunIcon } from "./icon.component"
 
 type HeaderProps = {
   readonly theme: "light" | "dark"

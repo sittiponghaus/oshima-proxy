@@ -13,4 +13,4 @@ export {
   requestLocationStateAtom,
   type LocationQueryOptions,
   type UserLocation
-} from "@/app/atom/geolocation.atom"
+} from "@/app/store/geolocation.store"

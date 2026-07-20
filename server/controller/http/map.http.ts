@@ -1,7 +1,7 @@
 import { cacheKeyMap, withRouteCache } from "@/server/runtime/response-cache"
 import { apiPath } from "@/shared/http/api"
 import { MapResponse, mergeMapResponses } from "@/shared/oshima/schema"
-import { Effect, Layer, Result, Schema } from "effect"
+import { Effect, Layer, Schema } from "effect"
 import { HttpClient, HttpClientRequest, HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/unstable/http"
 
 const UPSTREAM = "https://api.oshimaland.co.jp/map"
@@ -25,23 +25,28 @@ function chunkKeys(keys: readonly string[], size: number): string[][] {
   return batches
 }
 
-const fetchUpstreamBatch = (keys: readonly string[]) =>
-  Effect.gen(function* () {
-    const request = yield* HttpClientRequest.bodyJson(HttpClientRequest.post(UPSTREAM), { keys })
-    const upstreamRequest = HttpClientRequest.setHeaders(request, {
-      accept: "application/json",
-      origin: "https://www.oshimaland.com",
-      referer: "https://www.oshimaland.com/"
-    })
-
-    const response = yield* HttpClient.execute(upstreamRequest)
-    if (response.status < 200 || response.status >= 300) {
-      return yield* Effect.fail(jsonError(502, `Upstream map API returned HTTP ${response.status}`))
-    }
-
-    const text = yield* response.text
-    return yield* Schema.decodeUnknownEffect(MapResponse)(JSON.parse(text))
+const fetchUpstreamBatch = Effect.fn("map.fetchUpstreamBatch")(function* (keys: readonly string[]) {
+  const request = yield* HttpClientRequest.bodyJson(HttpClientRequest.post(UPSTREAM), { keys })
+  const upstreamRequest = HttpClientRequest.setHeaders(request, {
+    accept: "application/json",
+    origin: "https://www.oshimaland.com",
+    referer: "https://www.oshimaland.com/"
   })
+
+  const response = yield* HttpClient.execute(upstreamRequest)
+  if (response.status < 200 || response.status >= 300) {
+    return yield* Effect.fail(jsonError(502, `Upstream map API returned HTTP ${response.status}`))
+  }
+
+  const text = yield* response.text
+  const parsed = yield* Effect.try({
+    try: (): unknown => JSON.parse(text),
+    catch: () => jsonError(502, "Upstream map API returned invalid JSON")
+  })
+  return yield* Schema.decodeUnknownEffect(MapResponse)(parsed).pipe(
+    Effect.mapError(() => jsonError(502, "Upstream map response failed schema check"))
+  )
+})
 
 export const MapRouteLive = Layer.effectDiscard(
   Effect.gen(function* () {
@@ -51,12 +56,9 @@ export const MapRouteLive = Layer.effectDiscard(
       "POST",
       apiPath("/map"),
       Effect.gen(function* () {
-        const decoded = yield* Effect.result(HttpServerRequest.schemaBodyJson(MapRequestBody))
-        if (Result.isFailure(decoded)) {
-          return jsonError(400, "Body must be { keys: string[] } (min 1)")
-        }
-
-        const body = Result.getOrThrow(decoded)
+        const body = yield* HttpServerRequest.schemaBodyJson(MapRequestBody).pipe(
+          Effect.mapError(() => jsonError(400, "Body must be { keys: string[] } (min 1)"))
+        )
         const keys = [...new Set(body.keys)]
 
         return yield* withRouteCache({
