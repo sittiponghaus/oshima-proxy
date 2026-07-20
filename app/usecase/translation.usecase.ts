@@ -1,15 +1,16 @@
 /**
  * Translation usecase — Effect programs + support helpers for hooks.
+ * Require `TranslatorApi`; run via `TranslatorApiRuntime` at the UI edge.
  */
 import * as translationRepository from "@/app/repository/translation.repository"
 import {
   TranslationAvailabilityStatus,
-  TranslatorApi,
   type TranslationLanguagePair
 } from "@/app/repository/translation.repository"
 import { Effect } from "effect"
 
 export {
+  isTranslatorApiPresent,
   TranslationAvailabilityStatus,
   TranslationError,
   TranslatorApi,
@@ -34,21 +35,18 @@ export function shouldShowTranslateControl(availability: TranslationAvailability
   )
 }
 
-const withTranslatorApi = <A, E>(effect: Effect.Effect<A, E, TranslatorApi>) =>
-  effect.pipe(Effect.provide(TranslatorApi.Live))
-
 export const checkTranslationAvailability = Effect.fn("usecase.checkTranslationAvailability")(function* (
   pair: TranslationLanguagePair = DEFAULT_TRANSLATION_PAIR
 ) {
   if (!isTranslatorSupported()) {
     return TranslationAvailabilityStatus.Unavailable
   }
-  return yield* withTranslatorApi(translationRepository.checkTranslationAvailability(pair))
+  return yield* translationRepository.checkTranslationAvailability(pair)
 })
 
 export const translateDescription = Effect.fn("usecase.translateDescription")(function* (
   text: string,
   pair: TranslationLanguagePair = DEFAULT_TRANSLATION_PAIR
 ) {
-  return yield* withTranslatorApi(translationRepository.translateText(text, pair))
+  return yield* translationRepository.translateText(text, pair)
 })

@@ -34,10 +34,13 @@ const isSameOrigin = (request: HttpServerRequest.HttpServerRequest): boolean => 
 
   const referer = request.headers["referer"]
   if (referer) {
-    return Result.match(Result.try(() => new URL(referer).origin), {
-      onFailure: () => false,
-      onSuccess: (origin) => origin === selfOrigin
-    })
+    return Result.match(
+      Result.try(() => new URL(referer).origin),
+      {
+        onFailure: () => false,
+        onSuccess: (origin) => origin === selfOrigin
+      }
+    )
   }
 
   return request.method === "GET" || request.method === "HEAD"

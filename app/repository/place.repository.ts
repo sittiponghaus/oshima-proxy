@@ -1,7 +1,7 @@
 /**
  * Places autocomplete + details: wrap HTTP + map JSON into domain types.
  */
-import { apiFetchAdapter, HttpError } from "@/app/adapter/http.adapter"
+import { ApiHttp, HttpError } from "@/app/adapter/http.adapter"
 import { apiPath } from "@/shared/http/api"
 import { Effect, Schema } from "effect"
 
@@ -62,15 +62,15 @@ const parseJsonBody = Effect.fn("place.parseJsonBody")(function* (res: Response,
 export const autocompletePlace = Effect.fn("place.autocompletePlace")(function* (query: string) {
   const url = new URL(apiPath("/places/autocomplete"), location.origin)
   url.searchParams.set("q", query)
-  const res = yield* apiFetchAdapter(url).pipe(
-    Effect.mapError(
-      (cause) =>
-        cause instanceof PlaceError
-          ? cause
-          : new PlaceError({
-              message: cause instanceof HttpError ? cause.message : "Place search failed",
-              cause
-            })
+  const http = yield* ApiHttp
+  const res = yield* http.fetch(url).pipe(
+    Effect.mapError((cause) =>
+      cause instanceof PlaceError
+        ? cause
+        : new PlaceError({
+            message: cause instanceof HttpError ? cause.message : "Place search failed",
+            cause
+          })
     )
   )
   const unknown = yield* parseJsonBody(res, "Search response")
@@ -87,15 +87,15 @@ export const autocompletePlace = Effect.fn("place.autocompletePlace")(function* 
 export const fetchPlaceDetail = Effect.fn("place.fetchPlaceDetail")(function* (placeId: string) {
   const url = new URL(apiPath("/places/details"), location.origin)
   url.searchParams.set("placeId", placeId)
-  const res = yield* apiFetchAdapter(url).pipe(
-    Effect.mapError(
-      (cause) =>
-        cause instanceof PlaceError
-          ? cause
-          : new PlaceError({
-              message: cause instanceof HttpError ? cause.message : "Place lookup failed",
-              cause
-            })
+  const http = yield* ApiHttp
+  const res = yield* http.fetch(url).pipe(
+    Effect.mapError((cause) =>
+      cause instanceof PlaceError
+        ? cause
+        : new PlaceError({
+            message: cause instanceof HttpError ? cause.message : "Place lookup failed",
+            cause
+          })
     )
   )
   const unknown = yield* parseJsonBody(res, "Place lookup")
@@ -134,9 +134,7 @@ export function mapSuggestionToPlaceResult(suggestion: PlaceSuggestion): PlaceRe
 }
 
 /** Resolve suggestion to PlaceResult (inline map or details fetch). */
-export const resolvePlaceSelection = Effect.fn("place.resolvePlaceSelection")(function* (
-  suggestion: PlaceSuggestion
-) {
+export const resolvePlaceSelection = Effect.fn("place.resolvePlaceSelection")(function* (suggestion: PlaceSuggestion) {
   const mapped = mapSuggestionToPlaceResult(suggestion)
   if (mapped) return mapped
   return yield* fetchPlaceDetail(suggestion.placeId)

@@ -1,7 +1,7 @@
 /**
  * Property detail repository: HTTP adapter + wire→domain mapping.
  */
-import { executeHttpAdapter, HttpClientRequest, HttpClientResponse, HttpError } from "@/app/adapter/http.adapter"
+import { ApiHttp, HttpClientRequest, HttpClientResponse, HttpError } from "@/app/adapter/http.adapter"
 import { LoadStatus } from "@/app/config/load-status"
 import { apiPath } from "@/shared/http/api"
 import {
@@ -56,7 +56,8 @@ export const fetchProperty = Effect.fn("property.fetchProperty")(function* (key:
   const encoded = encodeURIComponent(key)
   const base = HttpClientRequest.get(apiPath(`/property/${encoded}`))
 
-  const response = yield* executeHttpAdapter(base).pipe(
+  const http = yield* ApiHttp
+  const response = yield* http.execute(base).pipe(
     Effect.mapError(
       (cause) =>
         new PropertyError({

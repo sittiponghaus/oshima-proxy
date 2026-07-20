@@ -1,4 +1,11 @@
-import { localStorageAdapter } from "@/app/adapter/localstorage.adapter"
+/**
+ * Geolocation permission + position atoms.
+ *
+ * Persistence: `Atom.kvs` via `browserAtomRuntime` (localStorage KeyValueStore).
+ * Position reads: `Geolocation` from the same Atom runtime (no local provide).
+ */
+import { browserAtomRuntime } from "@/app/store/browser-atom.runtime"
+import { Geolocation } from "@effect/platform-browser"
 import { Effect, Schema } from "effect"
 import type * as AsyncResult from "effect/unstable/reactivity/AsyncResult"
 import * as Atom from "effect/unstable/reactivity/Atom"
@@ -50,6 +57,19 @@ export const geolocationAtomKey = {
 const RequestStateLocationLocalStorageKey = `$atom-${geolocationAtomKey.requestState().join("-")}`
 const LocationLocalStorageKey = `$atom-${geolocationAtomKey.location().join("-")}`
 
+const RequestLocationStateSchema = Schema.Literals([
+  RequestLocationState.NEVER_ASK,
+  RequestLocationState.NOT_ALLOWED,
+  RequestLocationState.ALLOWED,
+  RequestLocationState.UNSUPPORTED
+])
+
+const UserLocationSchema = Schema.Struct({
+  latitude: Schema.Number,
+  longitude: Schema.Number,
+  accuracy: Schema.Number
+})
+
 const LocationRequestOptions: PositionOptions = {
   enableHighAccuracy: true,
   timeout: 10_000,
@@ -64,8 +84,16 @@ export type LocationQueryOptions = {
   readonly retry: boolean
 }
 
-function getCurrentUserLocation(): Effect.Effect<UserLocation, LocationPermissionError> {
-  if (typeof navigator === "undefined" || !navigator.geolocation) {
+export function isGeolocationSupported(): boolean {
+  return typeof navigator !== "undefined" && Boolean(navigator.geolocation)
+}
+
+function getCurrentUserLocation(): Effect.Effect<
+  UserLocation,
+  LocationPermissionError,
+  Geolocation.Geolocation
+> {
+  if (!isGeolocationSupported()) {
     return Effect.fail(
       new LocationPermissionError({
         message: "Geolocation is not supported by this browser.",
@@ -74,36 +102,57 @@ function getCurrentUserLocation(): Effect.Effect<UserLocation, LocationPermissio
     )
   }
 
-  return Effect.callback<UserLocation, LocationPermissionError>((resume) => {
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        resume(
-          Effect.succeed({
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-            accuracy: position.coords.accuracy
-          })
-        )
-      },
-      (error) => {
-        resume(Effect.fail(CreateLocationPermissionError(error)))
-      },
-      LocationRequestOptions
+  return Geolocation.Geolocation.use((geo) =>
+    geo.getCurrentPosition(LocationRequestOptions).pipe(
+      Effect.map((position) => ({
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        accuracy: position.coords.accuracy
+      })),
+      Effect.mapError(mapGeolocationError)
     )
-  })
+  )
+}
+
+function mapGeolocationError(error: Geolocation.GeolocationError): LocationPermissionError {
+  switch (error.reason._tag) {
+    case "PermissionDenied":
+      return new LocationPermissionError({
+        message: "Location access was denied by the user.",
+        reason: LocationErrorReason.Denied,
+        cause: error
+      })
+    case "PositionUnavailable":
+      return new LocationPermissionError({
+        message: "Location information is unavailable.",
+        reason: LocationErrorReason.Unavailable,
+        cause: error
+      })
+    case "Timeout":
+      return new LocationPermissionError({
+        message: "Location request timed out.",
+        reason: LocationErrorReason.Timeout,
+        cause: error
+      })
+    default:
+      return new LocationPermissionError({
+        message: "Unable to retrieve location.",
+        reason: LocationErrorReason.Unknown,
+        cause: error
+      })
+  }
 }
 
 /**
  * Writable request-state atom (query + mutation).
- * Read: localStorage (or NEVER_ASK). Write: persist then update in-memory.
+ * Backed by `KeyValueStore` via `Atom.kvs`.
  */
-export const requestLocationStateAtom: Atom.Writable<RequestLocationState> = Atom.writable(
-  (): RequestLocationState => ReadStoredRequestLocationState(),
-  (ctx, state: RequestLocationState) => {
-    localStorageAdapter.setItemSync(RequestStateLocationLocalStorageKey, state)
-    ctx.setSelf(state)
-  }
-).pipe(Atom.keepAlive)
+export const requestLocationStateAtom: Atom.Writable<RequestLocationState> = Atom.kvs({
+  runtime: browserAtomRuntime,
+  key: RequestStateLocationLocalStorageKey,
+  schema: RequestLocationStateSchema,
+  defaultValue: () => RequestLocationState.NEVER_ASK
+}).pipe(Atom.keepAlive)
 
 /**
  * Controls whether the location atom fetches (TanStack `enabled` / `retry`).
@@ -114,88 +163,36 @@ export const locationQueryOptionsAtom: Atom.Writable<LocationQueryOptions> = Ato
 }).pipe(Atom.keepAlive)
 
 /**
- * Location query atom: returns stored cache when disabled; otherwise
- * `getCurrentPosition`. Refresh is forced via `useAtomRefresh` / registry.refresh.
- * Automatic revalidation uses `Atom.swr` with staleTime ≈ 5 minutes.
+ * Persisted last-known location (`Atom.kvs`). Also used as the write target for
+ * `persistLocationAtom` / `useLocationMutation`.
  */
-export const locationAtom: Atom.Atom<AsyncResult.AsyncResult<UserLocation | null, LocationPermissionError>> = Atom.make(
-  (get): Effect.Effect<UserLocation | null, LocationPermissionError> => {
-    const { enabled, retry } = get(locationQueryOptionsAtom)
-    if (!enabled) {
-      return Effect.succeed(ReadStoredLocation())
-    }
-
-    const fetch = getCurrentUserLocation()
-    return retry ? fetch.pipe(Effect.retry({ times: 2 })) : fetch
-  },
-  { initialValue: ReadStoredLocation() }
-).pipe(
-  Atom.swr({
-    staleTime: LOCATION_STALE_TIME,
-    revalidateOnMount: true,
-    revalidateOnFocus: true
-  }),
-  Atom.keepAlive
-)
+export const persistLocationAtom: Atom.Writable<UserLocation | null> = Atom.kvs({
+  runtime: browserAtomRuntime,
+  key: LocationLocalStorageKey,
+  schema: Schema.NullOr(UserLocationSchema),
+  defaultValue: () => null
+}).pipe(Atom.keepAlive)
 
 /**
- * Location mutation atom: persist to localStorage (TanStack setQueryData
- * equivalent is unnecessary — the locationAtom AsyncResult already holds the
- * fetched value; storage seeds the next cold read / disabled path).
+ * Location query atom: returns stored cache when disabled; otherwise
+ * `Geolocation.getCurrentPosition` via `browserAtomRuntime`.
  */
-export const persistLocationAtom = Atom.fnSync((location: UserLocation) => {
-  localStorageAdapter.setItemSync(LocationLocalStorageKey, JSON.stringify(location))
-  return location
-})
+export const locationAtom: Atom.Atom<AsyncResult.AsyncResult<UserLocation | null, LocationPermissionError>> =
+  browserAtomRuntime
+    .atom((get): Effect.Effect<UserLocation | null, LocationPermissionError, Geolocation.Geolocation> => {
+      const { enabled, retry } = get(locationQueryOptionsAtom)
+      if (!enabled) {
+        return Effect.succeed(get(persistLocationAtom))
+      }
 
-function ReadStoredRequestLocationState(): RequestLocationState {
-  const item = localStorageAdapter.getItemSync(RequestStateLocationLocalStorageKey)
-  return IsRequestLocationState(item) ? item : RequestLocationState.NEVER_ASK
-}
-
-function ReadStoredLocation(): UserLocation | null {
-  const item = localStorageAdapter.getItemSync(LocationLocalStorageKey)
-  if (!item) return null
-
-  try {
-    return JSON.parse(item) as UserLocation
-  } catch {
-    return null
-  }
-}
-
-function IsRequestLocationState(input: string | null): input is RequestLocationState {
-  return Object.values(RequestLocationState).some((state) => state === input)
-}
-
-function CreateLocationPermissionError(error: GeolocationPositionError): LocationPermissionError {
-  if (error.code === error.PERMISSION_DENIED || error.code === 1) {
-    return new LocationPermissionError({
-      message: "Location access was denied by the user.",
-      reason: LocationErrorReason.Denied,
-      cause: error
-    })
-  }
-
-  if (error.code === error.POSITION_UNAVAILABLE || error.code === 2) {
-    return new LocationPermissionError({
-      message: "Location information is unavailable.",
-      reason: LocationErrorReason.Unavailable,
-      cause: error
-    })
-  }
-
-  if (error.code === error.TIMEOUT || error.code === 3) {
-    return new LocationPermissionError({
-      message: "Location request timed out.",
-      reason: LocationErrorReason.Timeout,
-      cause: error
-    })
-  }
-
-  return new LocationPermissionError({
-    message: "Unable to retrieve location.",
-    reason: LocationErrorReason.Unknown,
-    cause: error
-  })
-}
+      const fetch = getCurrentUserLocation()
+      return retry ? fetch.pipe(Effect.retry({ times: 2 })) : fetch
+    }, { initialValue: null })
+    .pipe(
+      Atom.swr({
+        staleTime: LOCATION_STALE_TIME,
+        revalidateOnMount: true,
+        revalidateOnFocus: true
+      }),
+      Atom.keepAlive
+    )

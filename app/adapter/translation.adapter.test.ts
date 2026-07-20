@@ -1,22 +1,21 @@
 import {
-  checkTranslatorAvailabilityAdapter,
-  isTranslatorApiPresentAdapter,
-  translateTextAdapter,
+  isTranslatorApiPresent,
   TranslationAvailabilityStatus,
   TranslationError,
   TranslatorApi
 } from "@/app/adapter/translation.adapter"
+import { TranslatorApiRuntime } from "@/app/runtime/translator-api.runtime"
 import { Effect } from "effect"
 import { afterEach, describe, expect, it } from "vitest"
 
-describe("isTranslatorApiPresentAdapter", () => {
+describe("isTranslatorApiPresent", () => {
   afterEach(() => {
     Reflect.deleteProperty(globalThis, "Translator")
   })
 
   it("returns false when Translator is missing", () => {
     Reflect.deleteProperty(globalThis, "Translator")
-    expect(isTranslatorApiPresentAdapter()).toBe(false)
+    expect(isTranslatorApiPresent()).toBe(false)
   })
 
   it("accepts Translator as a class (typeof function)", () => {
@@ -29,11 +28,11 @@ describe("isTranslatorApiPresentAdapter", () => {
       }
     }
     Reflect.set(globalThis, "Translator", Translator)
-    expect(isTranslatorApiPresentAdapter()).toBe(true)
+    expect(isTranslatorApiPresent()).toBe(true)
   })
 })
 
-describe("checkTranslatorAvailabilityAdapter", () => {
+describe("TranslatorApi.checkAvailability", () => {
   afterEach(() => {
     Reflect.deleteProperty(globalThis, "Translator")
   })
@@ -49,7 +48,12 @@ describe("checkTranslatorAvailabilityAdapter", () => {
     }
     Reflect.set(globalThis, "Translator", Translator)
     await expect(
-      Effect.runPromise(checkTranslatorAvailabilityAdapter({ sourceLanguage: "ja", targetLanguage: "en" }))
+      TranslatorApiRuntime.runPromise(
+        Effect.gen(function* () {
+          const api = yield* TranslatorApi
+          return yield* api.checkAvailability({ sourceLanguage: "ja", targetLanguage: "en" })
+        })
+      )
     ).resolves.toBe(TranslationAvailabilityStatus.Downloadable)
   })
 
@@ -64,12 +68,17 @@ describe("checkTranslatorAvailabilityAdapter", () => {
     }
     Reflect.set(globalThis, "Translator", Translator)
     await expect(
-      Effect.runPromise(checkTranslatorAvailabilityAdapter({ sourceLanguage: "ja", targetLanguage: "en" }))
+      TranslatorApiRuntime.runPromise(
+        Effect.gen(function* () {
+          const api = yield* TranslatorApi
+          return yield* api.checkAvailability({ sourceLanguage: "ja", targetLanguage: "en" })
+        })
+      )
     ).rejects.toSatisfy((error: unknown) => error instanceof TranslationError)
   })
 })
 
-describe("translateTextAdapter", () => {
+describe("TranslatorApi.translate", () => {
   afterEach(() => {
     Reflect.deleteProperty(globalThis, "Translator")
   })
@@ -91,7 +100,12 @@ describe("translateTextAdapter", () => {
     }
     Reflect.set(globalThis, "Translator", Translator)
     await expect(
-      Effect.runPromise(translateTextAdapter("火災", { sourceLanguage: "ja", targetLanguage: "en" }))
+      TranslatorApiRuntime.runPromise(
+        Effect.gen(function* () {
+          const api = yield* TranslatorApi
+          return yield* api.translate("火災", { sourceLanguage: "ja", targetLanguage: "en" })
+        })
+      )
     ).resolves.toBe("EN:火災")
     expect(destroyed).toBe(true)
   })
@@ -116,8 +130,8 @@ describe("TranslatorApi.Live", () => {
     const program = Effect.gen(function* () {
       const api = yield* TranslatorApi
       return yield* api.translate("x", { sourceLanguage: "ja", targetLanguage: "en" })
-    }).pipe(Effect.provide(TranslatorApi.Live))
+    })
 
-    await expect(Effect.runPromise(program)).resolves.toBe("hello")
+    await expect(TranslatorApiRuntime.runPromise(program)).resolves.toBe("hello")
   })
 })

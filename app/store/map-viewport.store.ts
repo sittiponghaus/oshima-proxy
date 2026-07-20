@@ -1,10 +1,12 @@
 /**
- * Persists the map's last viewport (center + zoom) to localStorage so it can
- * be restored as the `initialViewState` on the next load. Decoupled from the
- * geolocation atoms, which persist the user's detected coordinates separately —
- * this only tracks where the map camera was left.
+ * Persists the map's last viewport (center + zoom) via Effect `Atom.kvs` +
+ * `BrowserKeyValueStore.layerLocalStorage` so it can be restored as the
+ * `initialViewState` on the next load. Decoupled from the geolocation atoms,
+ * which persist the user's detected coordinates separately — this only tracks
+ * where the map camera was left.
  */
-import { localStorageAdapter } from "@/app/adapter/localstorage.adapter"
+import { browserAtomRuntime } from "@/app/store/browser-atom.runtime"
+import { Schema } from "effect"
 import * as Atom from "effect/unstable/reactivity/Atom"
 
 export interface StoredViewport {
@@ -20,38 +22,19 @@ export const mapViewportAtomKey = {
 
 const MapViewportLocalStorageKey = `$atom-${mapViewportAtomKey.viewport().join("-")}`
 
+const StoredViewportSchema = Schema.Struct({
+  longitude: Schema.Number,
+  latitude: Schema.Number,
+  zoom: Schema.Number
+})
+
 /**
  * Writable viewport atom (query + mutation).
- * Read: localStorage (or null). Write: persist then update in-memory.
+ * Backed by `KeyValueStore` via `Atom.kvs`.
  */
-export const mapViewportAtom: Atom.Writable<StoredViewport | null> = Atom.writable(
-  (): StoredViewport | null => ReadStoredViewport(),
-  (ctx, viewport: StoredViewport | null) => {
-    if (viewport) {
-      localStorageAdapter.setItemSync(MapViewportLocalStorageKey, JSON.stringify(viewport))
-    }
-    ctx.setSelf(viewport)
-  }
-).pipe(Atom.keepAlive)
-
-function ReadStoredViewport(): StoredViewport | null {
-  const item = localStorageAdapter.getItemSync(MapViewportLocalStorageKey)
-  if (!item) return null
-
-  try {
-    const parsed = JSON.parse(item) as unknown
-    return IsStoredViewport(parsed) ? parsed : null
-  } catch {
-    return null
-  }
-}
-
-function IsStoredViewport(input: unknown): input is StoredViewport {
-  if (typeof input !== "object" || input === null) return false
-  const candidate = input as Record<string, unknown>
-  return (
-    typeof candidate.longitude === "number" &&
-    typeof candidate.latitude === "number" &&
-    typeof candidate.zoom === "number"
-  )
-}
+export const mapViewportAtom: Atom.Writable<StoredViewport | null> = Atom.kvs({
+  runtime: browserAtomRuntime,
+  key: MapViewportLocalStorageKey,
+  schema: Schema.NullOr(StoredViewportSchema),
+  defaultValue: () => null
+}).pipe(Atom.keepAlive)

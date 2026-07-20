@@ -1,12 +1,7 @@
+import { LoadStatus } from "@/app/config/load-status"
 import { describe, expect, test } from "@effect/vitest"
 
-import { LoadStatus } from "@/app/config/load-status"
-import {
-  mapPropertyLoadError,
-  PropertyError,
-  propertyContributeUrl,
-  propertySourceUrl
-} from "./property.repository"
+import { mapPropertyLoadError, PropertyError, propertyContributeUrl, propertySourceUrl } from "./property.repository"
 
 describe("property URL helpers", () => {
   test("delegates to shared Oshima URLs", () => {

@@ -2,9 +2,6 @@ import { AppHeader, LocationControl, MapAttribution, MapStatusBanner } from "@/a
 import { LocationConsentDialog } from "@/app/component/location-consent-dialog.component"
 import { MapView } from "@/app/component/map-view.component"
 import { LoadStatus } from "@/app/config/load-status"
-
-import "maplibre-gl/dist/maplibre-gl.css"
-
 import { PropertyPanel } from "@/app/container/property-panel.container"
 import { SearchBox } from "@/app/container/search-box.container"
 import {
@@ -13,13 +10,16 @@ import {
   useUserGeolocation,
   type UserLocation
 } from "@/app/hook/geolocation.hook"
+import { useMapShareSearch } from "@/app/hook/map-share-search.hook"
 import { useMapViewport } from "@/app/hook/map-viewport.hook"
 import { useTheme } from "@/app/hook/theme.hook"
-import { loadMapTile, mapTileKeySignature, type MapCluster, type MapMarker } from "@/app/usecase/map-tile.usecase"
+import { mapTileQueryOptions } from "@/app/query/domain.query"
+import { resolveSelectedMarker } from "@/app/usecase/map-share-search.usecase"
+import { mapTileKeySignature, type MapCluster, type MapMarker } from "@/app/usecase/map-tile.usecase"
 import type { PlaceResult } from "@/app/usecase/place.usecase"
+import { useQuery } from "@tanstack/react-query"
 import { useDebounce } from "@uidotdev/usehooks"
 import { type MapRef } from "@vis.gl/react-maplibre"
-import { Effect } from "effect"
 import type { Map as MaplibreMap } from "maplibre-gl"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
@@ -40,16 +40,13 @@ function viewportFromMap(map: MaplibreMap): Viewport {
   }
 }
 
-/** Root map app logic — calls hooks/usecases only; renders components. */
+/** Root map app logic — calls hooks/queries only; renders components. */
 export function App() {
   const mapRef = useRef<MapRef>(null)
-  const { setStoredViewport, initialViewState } = useMapViewport()
+  const [share, setShare] = useMapShareSearch()
+  const { setStoredViewport, initialViewState } = useMapViewport(share)
   const { theme, toggleTheme, mapStyle } = useTheme()
   const [viewport, setViewport] = useState<Viewport | null>(null)
-  const [markers, setMarkers] = useState<MapMarker[]>([])
-  const [clusters, setClusters] = useState<MapCluster[]>([])
-  const [status, setStatus] = useState<LoadStatus>(LoadStatus.Idle)
-  const [selected, setSelected] = useState<MapMarker | null>(null)
   const [locationConsentOpen, setLocationConsentOpen] = useState(false)
   const [aboutOpen, setAboutOpen] = useState(false)
 
@@ -59,40 +56,36 @@ export function App() {
   }, [viewport])
   const debouncedKeysSignature = useDebounce(keysSignature, 180)
 
-  useEffect(() => {
-    if (!debouncedKeysSignature) return
-
-    let cancelled = false
-    setStatus(LoadStatus.Loading)
-
-    void Effect.runPromise(loadMapTile(debouncedKeysSignature))
-      .then((result) => {
-        if (cancelled) return
-        setMarkers(result.markers)
-        setClusters(result.clusters)
-        setStatus(LoadStatus.Ready)
-      })
-      .catch(() => {
-        if (cancelled) return
-        setStatus(LoadStatus.Error)
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [debouncedKeysSignature])
+  const mapTileQuery = useQuery(mapTileQueryOptions(debouncedKeysSignature))
+  const markers = mapTileQuery.data?.markers ?? []
+  const clusters = mapTileQuery.data?.clusters ?? []
+  const selected = useMemo(() => resolveSelectedMarker(share, markers), [share, markers])
+  const status: LoadStatus = !debouncedKeysSignature
+    ? LoadStatus.Idle
+    : mapTileQuery.isPending || mapTileQuery.isFetching
+      ? LoadStatus.Loading
+      : mapTileQuery.isError
+        ? LoadStatus.Error
+        : LoadStatus.Ready
 
   const syncViewport = useCallback(() => {
     const map = mapRef.current?.getMap()
     if (!map) return
     setViewport(viewportFromMap(map))
     const center = map.getCenter()
-    setStoredViewport({
+    const next = {
       longitude: center.lng,
       latitude: center.lat,
       zoom: map.getZoom()
+    }
+    // Keep localStorage and share URL in lockstep on every camera update.
+    setStoredViewport(next)
+    void setShare({
+      lat: next.latitude,
+      lng: next.longitude,
+      z: next.zoom
     })
-  }, [setStoredViewport])
+  }, [setShare, setStoredViewport])
 
   const flyToPlace = useCallback((place: PlaceResult) => {
     mapRef.current?.flyTo({
@@ -152,10 +145,17 @@ export function App() {
     setLocationConsentOpen(false)
   }, [])
 
-  const onMarkerClick = useCallback((event: { originalEvent: MouseEvent }, marker: MapMarker) => {
-    event.originalEvent.stopPropagation()
-    setSelected(marker)
-  }, [])
+  const onMarkerClick = useCallback(
+    (event: { originalEvent: MouseEvent }, marker: MapMarker) => {
+      event.originalEvent.stopPropagation()
+      void setShare({ p: marker.key })
+    },
+    [setShare]
+  )
+
+  const clearSelected = useCallback(() => {
+    void setShare({ p: null })
+  }, [setShare])
 
   const onClusterClick = useCallback((event: { originalEvent: MouseEvent }, cluster: MapCluster) => {
     event.originalEvent.stopPropagation()
@@ -208,16 +208,17 @@ export function App() {
         mapStyle={mapStyle}
         markers={markers}
         clusters={clusters}
+        activeMarkerKey={selected?.key ?? null}
         onLoad={syncViewport}
         onMoveEnd={syncViewport}
-        onMapClick={() => setSelected(null)}
+        onMapClick={clearSelected}
         onMarkerClick={onMarkerClick}
         onClusterClick={onClusterClick}
       />
 
       <MapStatusBanner kind={statusKind} />
 
-      {selected ? <PropertyPanel marker={selected} onClose={() => setSelected(null)} /> : null}
+      {selected ? <PropertyPanel marker={selected} onClose={clearSelected} /> : null}
 
       <MapAttribution />
 

@@ -7,7 +7,7 @@ import { Spinner } from "./icon.component"
 export type TranslationUiState =
   | { readonly status: "idle" }
   | { readonly status: "loading" }
-  | { readonly status: "ready"; readonly text: string }
+  | { readonly status: "ready"; readonly text: string; readonly showing: "translation" | "original" }
   | { readonly status: "error"; readonly message: string }
 
 type Props = {
@@ -21,6 +21,7 @@ type Props = {
   readonly showTranslate: boolean
   readonly onClose: () => void
   readonly onImageError: (url: string) => void
+  readonly onPhotoClick: (url: string) => void
   readonly onTranslate: () => void
 }
 
@@ -36,6 +37,7 @@ export function PropertyPanelView({
   showTranslate,
   onClose,
   onImageError,
+  onPhotoClick,
   onTranslate
 }: Props) {
   return (
@@ -130,12 +132,11 @@ export function PropertyPanelView({
             {detail.info ? (
               <section>
                 <h2 className="text-[0.65rem] font-semibold tracking-[0.14em] text-[var(--muted)] uppercase">Report</h2>
-                <p className="mt-1 whitespace-pre-wrap text-[var(--ink)] leading-relaxed">{detail.info}</p>
-                {showTranslate && translation.status === "ready" ? (
-                  <p className="mt-2 whitespace-pre-wrap border-t border-[var(--line)] pt-2 text-[var(--ink)] leading-relaxed">
-                    {translation.text}
-                  </p>
-                ) : null}
+                <p className="mt-1 whitespace-pre-wrap text-[var(--ink)] leading-relaxed">
+                  {translation.status === "ready" && translation.showing === "translation"
+                    ? translation.text
+                    : detail.info}
+                </p>
                 {showTranslate && translation.status === "error" ? (
                   <p className="mt-2 text-xs text-[var(--ember)]">{translation.message}</p>
                 ) : null}
@@ -150,8 +151,10 @@ export function PropertyPanelView({
                         <Spinner />
                         Translating…
                       </>
-                    ) : translation.status === "ready" ? (
-                      "Translate again"
+                    ) : translation.status === "ready" && translation.showing === "translation" ? (
+                      "Show original"
+                    ) : translation.status === "ready" && translation.showing === "original" ? (
+                      "Show translation"
                     ) : (
                       "Translate"
                     )}
@@ -186,13 +189,12 @@ export function PropertyPanelView({
                 <h2 className="text-[0.65rem] font-semibold tracking-[0.14em] text-[var(--muted)] uppercase">Photos</h2>
                 <div className="mt-2 grid grid-cols-2 gap-2">
                   {visibleImages.map((img, index) => (
-                    <a
+                    <button
                       key={img.url}
-                      href={img.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      aria-label={`Open property photo ${index + 1}`}
-                      className="block border border-[var(--line)] bg-black/30">
+                      type="button"
+                      aria-label={`View property photo ${index + 1}`}
+                      className="block border border-[var(--line)] bg-black/30 p-0 text-left hover:border-[var(--ember)]"
+                      onClick={() => onPhotoClick(img.url)}>
                       <img
                         src={img.url}
                         alt=""
@@ -200,7 +202,7 @@ export function PropertyPanelView({
                         loading="lazy"
                         onError={() => onImageError(img.url)}
                       />
-                    </a>
+                    </button>
                   ))}
                 </div>
                 <p className="mt-1 text-[0.65rem] text-[var(--muted)]">

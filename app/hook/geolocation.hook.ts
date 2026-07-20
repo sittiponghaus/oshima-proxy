@@ -31,7 +31,7 @@ export function useRequestLocationStateQuery() {
   return useAtomValue(requestLocationStateAtom)
 }
 
-/** Mutation-like write of request permission state (+ localStorage). */
+/** Mutation-like write of request permission state (+ KeyValueStore). */
 export function useRequestLocationStateMutation() {
   return useAtomSet(requestLocationStateAtom)
 }
@@ -75,7 +75,7 @@ export function useLocationQuery(input: { readonly enabled: boolean; readonly re
   }
 }
 
-/** Mutation-like persist of a resolved location to localStorage. */
+/** Mutation-like persist of a resolved location to KeyValueStore. */
 export function useLocationMutation() {
   return useAtomSet(persistLocationAtom)
 }

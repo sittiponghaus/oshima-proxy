@@ -1,7 +1,7 @@
 /**
  * Map tile repository: HTTP adapter + wire→domain mapping.
  */
-import { executeHttpAdapter, HttpClientRequest, HttpClientResponse, HttpError } from "@/app/adapter/http.adapter"
+import { ApiHttp, HttpClientRequest, HttpClientResponse, HttpError } from "@/app/adapter/http.adapter"
 import { apiPath } from "@/shared/http/api"
 import { oshimaTileZoom, quadkeysForBounds } from "@/shared/oshima/quadkey"
 import {
@@ -51,10 +51,9 @@ export const loadMapTile = Effect.fn("map.loadMapTile")(function* (keysSignature
     Effect.mapError((cause) => toMapError("Failed to encode map request", cause))
   )
 
-  const response = yield* executeHttpAdapter(encoded).pipe(
-    Effect.mapError((cause) =>
-      toMapError(cause instanceof HttpError ? cause.message : "Map request failed", cause)
-    )
+  const http = yield* ApiHttp
+  const response = yield* http.execute(encoded).pipe(
+    Effect.mapError((cause) => toMapError(cause instanceof HttpError ? cause.message : "Map request failed", cause))
   )
 
   if (response.status < 200 || response.status >= 300) {

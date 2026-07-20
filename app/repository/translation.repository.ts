@@ -1,8 +1,8 @@
 /**
- * Translation repository — TranslatorApi service + domain helpers.
+ * Translation repository — domain helpers over `TranslatorApi`.
  */
 import {
-  isTranslatorApiPresentAdapter,
+  isTranslatorApiPresent,
   TranslatorApi,
   TranslationAvailabilityStatus,
   TranslationError,
@@ -10,18 +10,10 @@ import {
 } from "@/app/adapter/translation.adapter"
 import { Effect } from "effect"
 
-export { TranslationAvailabilityStatus, TranslationError, TranslatorApi }
+export { isTranslatorApiPresent, TranslationAvailabilityStatus, TranslationError, TranslatorApi }
 export type { TranslationLanguagePair }
 
-export const isTranslatorApiPresent = (): boolean => isTranslatorApiPresentAdapter()
-
-export const checkTranslationAvailability = Effect.fn("translation.checkAvailability")(function* (
-  pair: TranslationLanguagePair
-) {
-  const api = yield* TranslatorApi
-  return yield* api.checkAvailability(pair)
-})
-
+/** Empty-text guard then `TranslatorApi.translate`. */
 export const translateText = Effect.fn("translation.translateText")(function* (
   text: string,
   pair: TranslationLanguagePair
@@ -32,4 +24,11 @@ export const translateText = Effect.fn("translation.translateText")(function* (
   }
   const api = yield* TranslatorApi
   return yield* api.translate(trimmed, pair)
+})
+
+export const checkTranslationAvailability = Effect.fn("translation.checkAvailability")(function* (
+  pair: TranslationLanguagePair
+) {
+  const api = yield* TranslatorApi
+  return yield* api.checkAvailability(pair)
 })

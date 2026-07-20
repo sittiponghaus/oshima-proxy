@@ -1,5 +1,5 @@
+import { ApiHttpRuntime } from "@/app/runtime/api-http.runtime"
 import { describe, expect, test } from "@effect/vitest"
-import { Effect } from "effect"
 
 import { resolvePlaceSelection, searchPlace, shouldSearchPlace, type PlaceSuggestion } from "./place.usecase"
 
@@ -15,8 +15,8 @@ describe("shouldSearchPlace", () => {
 
 describe("searchPlace", () => {
   test("short-circuits without network for short queries", async () => {
-    expect(await Effect.runPromise(searchPlace("a"))).toEqual([])
-    expect(await Effect.runPromise(searchPlace("  "))).toEqual([])
+    expect(await ApiHttpRuntime.runPromise(searchPlace("a"))).toEqual([])
+    expect(await ApiHttpRuntime.runPromise(searchPlace("  "))).toEqual([])
   })
 })
 
@@ -30,7 +30,7 @@ describe("resolvePlaceSelection", () => {
       lat: 35.6,
       lng: 139.7
     }
-    await expect(Effect.runPromise(resolvePlaceSelection(suggestion))).resolves.toEqual({
+    await expect(ApiHttpRuntime.runPromise(resolvePlaceSelection(suggestion))).resolves.toEqual({
       placeId: "N1",
       name: "Tokyo",
       address: "Tokyo, Japan",

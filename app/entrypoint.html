@@ -5,12 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>OL Proxy</title>
     <meta
+      name="description"
+      content="OL Proxy — a clearer map for Oshimaland public incident reports (deaths, fires, and related events) on OpenFreeMap."
+    />
+    <!-- Production HTML (preloads, non-blocking CSS, module graph) is emitted by build.ts. -->
+    <meta
       http-equiv="Content-Security-Policy"
       content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://tiles.openfreemap.org https://*.openfreemap.org https://static.oshimaland.co.jp https://www.oshimaland.com https://www.oshimaland.co.jp; font-src 'self' data: https://tiles.openfreemap.org https://*.openfreemap.org; connect-src 'self' https://tiles.openfreemap.org https://*.openfreemap.org; worker-src 'self' blob:; child-src 'self' blob:"
     />
     <link rel="icon" href="../public/favicon.svg" type="image/svg+xml" sizes="any" />
     <link rel="apple-touch-icon" href="../public/favicon.svg" />
-    <script type="module" src="./config/entrypoint.tsx" async></script>
+    <script type="module" src="./config/entrypoint.tsx"></script>
   </head>
   <body id="root"></body>
 </html>

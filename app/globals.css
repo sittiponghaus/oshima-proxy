@@ -115,6 +115,8 @@ body {
 .oshima-marker {
   display: grid;
   place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
   font-size: 1.25rem;
   line-height: 1;
   cursor: pointer;
@@ -124,10 +126,30 @@ body {
     0 1px 3px rgba(0, 0, 0, 0.85);
   transition:
     transform 120ms ease,
-    filter 120ms ease;
+    filter 120ms ease,
+    border-color 120ms ease,
+    background-color 120ms ease,
+    box-shadow 120ms ease;
 }
 
 .oshima-marker:hover {
-  transform: scale(1.22);
+  transform: scale(1.12);
   filter: drop-shadow(0 0 4px rgba(224, 122, 58, 0.75));
+}
+
+.oshima-marker--active {
+  border: 1px solid var(--ember);
+  border-radius: 50%;
+  background: var(--panel);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--ember) 35%, transparent),
+    0 1px 2px rgba(0, 0, 0, 0.2);
+  filter: none;
+  z-index: 1;
+}
+
+.oshima-marker--active:hover {
+  border-color: var(--ember-soft);
+  transform: scale(1.08);
+  filter: none;
 }

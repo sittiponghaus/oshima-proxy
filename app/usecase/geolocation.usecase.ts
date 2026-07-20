@@ -1,44 +1,44 @@
 /**
  * Geolocation permission + position (types + atom handles for hooks).
  */
-import * as geolocationRepository from "@/app/repository/geolocation.repository"
-import type { UserLocation } from "@/app/repository/geolocation.repository"
+import * as geolocationStore from "@/app/store/geolocation.store"
+import type { UserLocation } from "@/app/store/geolocation.store"
 
 export type { UserLocation }
 export {
   LocationErrorReason,
   LocationPermissionError,
   RequestLocationState
-} from "@/app/repository/geolocation.repository"
+} from "@/app/store/geolocation.store"
 
 /** Atoms for React subscriptions (hooks only — not presentation). */
-export const requestLocationStateAtom = geolocationRepository.requestLocationStateAtom
-export const locationQueryOptionsAtom = geolocationRepository.locationQueryOptionsAtom
-export const locationAtom = geolocationRepository.locationAtom
-export const persistLocationAtom = geolocationRepository.persistLocationAtom
+export const requestLocationStateAtom = geolocationStore.requestLocationStateAtom
+export const locationQueryOptionsAtom = geolocationStore.locationQueryOptionsAtom
+export const locationAtom = geolocationStore.locationAtom
+export const persistLocationAtom = geolocationStore.persistLocationAtom
 
 export function isGeolocationSupported(): boolean {
-  return typeof navigator !== "undefined" && Boolean(navigator.geolocation)
+  return geolocationStore.isGeolocationSupported()
 }
 
-export function shouldShowLocationControl(requestState: geolocationRepository.RequestLocationState): boolean {
+export function shouldShowLocationControl(requestState: geolocationStore.RequestLocationState): boolean {
   return (
-    requestState === geolocationRepository.RequestLocationState.NEVER_ASK ||
-    requestState === geolocationRepository.RequestLocationState.NOT_ALLOWED ||
-    requestState === geolocationRepository.RequestLocationState.ALLOWED
+    requestState === geolocationStore.RequestLocationState.NEVER_ASK ||
+    requestState === geolocationStore.RequestLocationState.NOT_ALLOWED ||
+    requestState === geolocationStore.RequestLocationState.ALLOWED
   )
 }
 
 /** Friendlier UI copy for TaggedError reasons. */
-export function locationErrorCopy(error: geolocationRepository.LocationPermissionError): string {
+export function locationErrorCopy(error: geolocationStore.LocationPermissionError): string {
   switch (error.reason) {
-    case geolocationRepository.LocationErrorReason.Denied:
+    case geolocationStore.LocationErrorReason.Denied:
       return "Location access denied — check your browser settings"
-    case geolocationRepository.LocationErrorReason.Unavailable:
+    case geolocationStore.LocationErrorReason.Unavailable:
       return "Your location couldn't be determined"
-    case geolocationRepository.LocationErrorReason.Timeout:
+    case geolocationStore.LocationErrorReason.Timeout:
       return "Location request timed out — try again"
-    case geolocationRepository.LocationErrorReason.Unsupported:
+    case geolocationStore.LocationErrorReason.Unsupported:
       return "Not supported by this browser"
     default:
       return error.message
