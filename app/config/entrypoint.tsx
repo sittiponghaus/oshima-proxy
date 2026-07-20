@@ -2,6 +2,7 @@ import { ensureCsrfQueryData } from "@/app/query/domain.query"
 import { queryClient } from "@/app/query/query-client"
 import { RegistryProvider } from "@effect/atom-react"
 import { QueryClientProvider } from "@tanstack/react-query"
+import { NuqsAdapter } from "nuqs/adapters/react"
 import { StrictMode, Suspense, lazy } from "react"
 import { createRoot, type Root } from "react-dom/client"
 
@@ -23,12 +24,14 @@ if (hotData) hotData.root = root
 
 root.render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <RegistryProvider>
-        <Suspense fallback={null}>
-          <App />
-        </Suspense>
-      </RegistryProvider>
-    </QueryClientProvider>
+    <NuqsAdapter>
+      <QueryClientProvider client={queryClient}>
+        <RegistryProvider>
+          <Suspense fallback={null}>
+            <App />
+          </Suspense>
+        </RegistryProvider>
+      </QueryClientProvider>
+    </NuqsAdapter>
   </StrictMode>
 )

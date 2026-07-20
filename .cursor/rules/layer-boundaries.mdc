@@ -14,6 +14,7 @@ alwaysApply: false
 - Browser Translator API lives in `app/adapter/translation.adapter.ts` (`TranslatorApi`; provide via `app/runtime/translator-api.runtime.ts`).
 - Browser persistence + geolocation live in `app/store` via `Atom.kvs` / `browserAtomRuntime` (`BrowserKeyValueStore` + `Geolocation`).
 - Domain TanStack Query options live in `app/query/domain.query.ts` (subscribe with `useQuery`, imperatively `ensureQueryData`).
+- Shareable map URL state uses `nuqs` parsers backed by Effect Schema (`app/config/map-share-search.ts`).
 - Domain HTTP calls + mapping live in `app/repository/`.
 - `server/controller/http/*.http.ts` is Worker/upstream only.
 - Enforce with `bun run check:boundaries`.

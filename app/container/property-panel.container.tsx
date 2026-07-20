@@ -1,3 +1,4 @@
+import { PhotoLightboxDialog } from "@/app/component/photo-lightbox-dialog.component"
 import { PropertyPanelView, type TranslationUiState } from "@/app/component/property-panel.component"
 import { LoadStatus } from "@/app/config/load-status"
 import { useTranslator } from "@/app/hook/translation.hook"
@@ -20,6 +21,7 @@ type Props = {
 /** Property panel logic — calls hooks / queries only. */
 export function PropertyPanel({ marker, onClose }: Props) {
   const [brokenImages, setBrokenImages] = useState<ReadonlySet<string>>(() => new Set())
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
   const [translation, setTranslation] = useState<TranslationUiState>({ status: "idle" })
   const translationRequestIdRef = useRef(0)
   const { showControl: showTranslate, translate, isTranslationError } = useTranslator()
@@ -42,22 +44,36 @@ export function PropertyPanel({ marker, onClose }: Props) {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault()
-        onCloseEvent()
+      if (event.key !== "Escape") return
+      event.preventDefault()
+      // Lightbox owns Escape while open; otherwise close the panel.
+      if (lightboxUrl != null) {
+        setLightboxUrl(null)
+        return
       }
+      onCloseEvent()
     }
     document.addEventListener("keydown", onKeyDown)
     return () => document.removeEventListener("keydown", onKeyDown)
-  }, [])
+  }, [lightboxUrl])
 
   useEffect(() => {
     translationRequestIdRef.current += 1
     setBrokenImages(new Set())
+    setLightboxUrl(null)
     setTranslation({ status: "idle" })
   }, [marker.key])
 
   const onTranslate = () => {
+    if (translation.status === "ready") {
+      setTranslation({
+        status: "ready",
+        text: translation.text,
+        showing: translation.showing === "translation" ? "original" : "translation"
+      })
+      return
+    }
+
     const info = state.status === LoadStatus.Ready ? state.detail.info : null
     if (!info) return
 
@@ -66,7 +82,7 @@ export function PropertyPanel({ marker, onClose }: Props) {
     void translate(info)
       .then((text) => {
         if (requestId !== translationRequestIdRef.current) return
-        setTranslation({ status: "ready", text })
+        setTranslation({ status: "ready", text, showing: "translation" })
       })
       .catch((cause) => {
         if (requestId !== translationRequestIdRef.current) return
@@ -94,26 +110,38 @@ export function PropertyPanel({ marker, onClose }: Props) {
 
   const detail = state.status === LoadStatus.Ready ? state.detail : null
   const visibleImages = detail?.images.filter((img) => !brokenImages.has(img.url)) ?? []
+  const lightboxIndex = lightboxUrl ? visibleImages.findIndex((img) => img.url === lightboxUrl) : -1
 
   return (
-    <PropertyPanelView
-      marker={marker}
-      state={state}
-      sourceUrl={sourceUrl}
-      contributeUrl={contributeUrl}
-      detail={detail}
-      visibleImages={visibleImages}
-      translation={translation}
-      showTranslate={showTranslate}
-      onClose={onClose}
-      onTranslate={onTranslate}
-      onImageError={(url) => {
-        setBrokenImages((prev) => {
-          const next = new Set(prev)
-          next.add(url)
-          return next
-        })
-      }}
-    />
+    <>
+      <PropertyPanelView
+        marker={marker}
+        state={state}
+        sourceUrl={sourceUrl}
+        contributeUrl={contributeUrl}
+        detail={detail}
+        visibleImages={visibleImages}
+        translation={translation}
+        showTranslate={showTranslate}
+        onClose={onClose}
+        onPhotoClick={setLightboxUrl}
+        onTranslate={onTranslate}
+        onImageError={(url) => {
+          setBrokenImages((prev) => {
+            const next = new Set(prev)
+            next.add(url)
+            return next
+          })
+          setLightboxUrl((current) => (current === url ? null : current))
+        }}
+      />
+      {lightboxUrl ? (
+        <PhotoLightboxDialog
+          src={lightboxUrl}
+          label={lightboxIndex >= 0 ? `Photo ${lightboxIndex + 1}` : "Photo"}
+          onClose={() => setLightboxUrl(null)}
+        />
+      ) : null}
+    </>
   )
 }

@@ -27,6 +27,7 @@ type Props = {
   readonly mapStyle: string
   readonly markers: readonly MapMarker[]
   readonly clusters: readonly MapCluster[]
+  readonly activeMarkerKey: string | null
   readonly onLoad: () => void
   readonly onMoveEnd: () => void
   readonly onMapClick: () => void
@@ -41,6 +42,7 @@ export function MapView({
   mapStyle,
   markers,
   clusters,
+  activeMarkerKey,
   onLoad,
   onMoveEnd,
   onMapClick,
@@ -70,18 +72,25 @@ export function MapView({
         </Marker>
       ))}
 
-      {markers.map((marker) => (
-        <Marker
-          key={marker.key}
-          longitude={marker.longitude}
-          latitude={marker.latitude}
-          anchor="center"
-          onClick={(event) => onMarkerClick(event, marker)}>
-          <div className="oshima-marker" title="Reported property — click for details" aria-hidden="true">
-            🔥
-          </div>
-        </Marker>
-      ))}
+      {markers.map((marker) => {
+        const active = marker.key === activeMarkerKey
+        return (
+          <Marker
+            key={marker.key}
+            longitude={marker.longitude}
+            latitude={marker.latitude}
+            anchor="center"
+            onClick={(event) => onMarkerClick(event, marker)}>
+            <div
+              className={active ? "oshima-marker oshima-marker--active" : "oshima-marker"}
+              title={active ? "Selected property" : "Reported property — click for details"}
+              aria-current={active ? "true" : undefined}
+              aria-hidden="true">
+              🔥
+            </div>
+          </Marker>
+        )
+      })}
     </Map>
   )
 }
