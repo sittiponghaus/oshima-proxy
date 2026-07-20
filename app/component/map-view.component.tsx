@@ -2,6 +2,21 @@ import type { MapCluster, MapMarker } from "@/app/usecase/map-tile.usecase"
 import { Map, Marker, type MapRef } from "@vis.gl/react-maplibre"
 import type { RefObject } from "react"
 
+const MAPLIBRE_CSS_ID = "maplibre-gl-css"
+const MAPLIBRE_CSS_HREF = "/maplibre-gl.css"
+
+/** Load MapLibre CSS with the map chunk — keep it off the critical HTML path. */
+function ensureMaplibreCss(): void {
+  if (document.getElementById(MAPLIBRE_CSS_ID)) return
+  const link = document.createElement("link")
+  link.id = MAPLIBRE_CSS_ID
+  link.rel = "stylesheet"
+  link.href = MAPLIBRE_CSS_HREF
+  document.head.appendChild(link)
+}
+
+ensureMaplibreCss()
+
 type Props = {
   readonly mapRef: RefObject<MapRef | null>
   readonly initialViewState: {

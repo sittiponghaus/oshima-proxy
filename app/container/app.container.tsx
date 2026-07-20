@@ -2,9 +2,6 @@ import { AppHeader, LocationControl, MapAttribution, MapStatusBanner } from "@/a
 import { LocationConsentDialog } from "@/app/component/location-consent-dialog.component"
 import { MapView } from "@/app/component/map-view.component"
 import { LoadStatus } from "@/app/config/load-status"
-
-import "maplibre-gl/dist/maplibre-gl.css"
-
 import { PropertyPanel } from "@/app/container/property-panel.container"
 import { SearchBox } from "@/app/container/search-box.container"
 import {
