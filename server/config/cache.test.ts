@@ -1,4 +1,5 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, test } from "@effect/vitest"
+import { Effect } from "effect"
 
 import {
   ROUTE_CACHE_POLICY,
@@ -25,10 +26,10 @@ describe("cacheControlFor / ttlMsFor", () => {
 
 describe("strongEtag", () => {
   test("returns quoted sha-256 hex", async () => {
-    const etag = await strongEtag('{"a":1}')
+    const etag = await Effect.runPromise(strongEtag('{"a":1}'))
     expect(etag).toMatch(/^"[0-9a-f]{64}"$/)
-    expect(await strongEtag('{"a":1}')).toBe(etag)
-    expect(await strongEtag('{"a":2}')).not.toBe(etag)
+    expect(await Effect.runPromise(strongEtag('{"a":1}'))).toBe(etag)
+    expect(await Effect.runPromise(strongEtag('{"a":2}'))).not.toBe(etag)
   })
 })
 

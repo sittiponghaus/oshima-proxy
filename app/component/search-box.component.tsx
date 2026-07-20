@@ -1,7 +1,7 @@
-import type { PlaceSuggestion } from "@/app/usecase/places.usecase"
+import type { PlaceSuggestion } from "@/app/usecase/place.usecase"
 import type { RefObject } from "react"
 
-import { Spinner } from "./icons.component"
+import { Spinner } from "./icon.component"
 
 type Props = {
   readonly listId: string

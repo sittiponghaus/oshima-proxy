@@ -35,52 +35,62 @@ export const clearRouteCacheMemory = () => {
 
 const hasCacheApi = () => typeof caches !== "undefined" && "default" in caches
 
-const readEdge = async (key: string): Promise<CacheEntry | null> => {
+const readEdge = Effect.fn("responseCache.readEdge")(function* (key: string) {
   if (!hasCacheApi()) return readMemory(key)
-  try {
-    const hit = await caches.default.match(toCacheRequest(key))
-    if (!hit || !hit.ok) return readMemory(key)
-    const body = await hit.text()
-    const etag = hit.headers.get("etag") ?? (await strongEtag(body))
-    const expiresHeader = hit.headers.get("x-ol-expires")
-    const expiresAt = expiresHeader ? Number(expiresHeader) : Date.now()
-    if (expiresAt <= Date.now()) return null
-    return { body, etag, expiresAt }
-  } catch {
-    return readMemory(key)
-  }
-}
+  const hit = yield* Effect.tryPromise({
+    try: () => caches.default.match(toCacheRequest(key)),
+    catch: () => null
+  }).pipe(Effect.orElseSucceed(() => undefined))
+  if (!hit || !hit.ok) return readMemory(key)
 
-const writeEdge = async (key: string, entry: CacheEntry, kind: RouteCacheKind) => {
+  const body = yield* Effect.tryPromise({
+    try: () => hit.text(),
+    catch: () => null
+  }).pipe(Effect.orElseSucceed(() => null))
+  if (body == null) return readMemory(key)
+
+  const etagHeader = hit.headers.get("etag")
+  const etag = etagHeader ?? (yield* strongEtag(body))
+  const expiresHeader = hit.headers.get("x-ol-expires")
+  const expiresAt = expiresHeader ? Number(expiresHeader) : Date.now()
+  if (expiresAt <= Date.now()) return null
+  return { body, etag, expiresAt } satisfies CacheEntry
+})
+
+const writeEdge = Effect.fn("responseCache.writeEdge")(function* (
+  key: string,
+  entry: CacheEntry,
+  kind: RouteCacheKind
+) {
   writeMemory(key, entry)
   if (!hasCacheApi()) return
-  try {
-    const maxAge = Math.max(1, Math.floor((entry.expiresAt - Date.now()) / 1000))
-    await caches.default.put(
-      toCacheRequest(key),
-      new Response(entry.body, {
-        status: 200,
-        headers: {
-          "content-type": "application/json; charset=utf-8",
-          etag: entry.etag,
-          "cache-control": cacheControlFor(kind),
-          "x-ol-expires": String(entry.expiresAt),
-          "x-ol-cache-ttl": String(maxAge)
-        }
-      })
-    )
-  } catch {
-    // Bun / local may not support Cache API put — memory still works.
-  }
-}
+  const maxAge = Math.max(1, Math.floor((entry.expiresAt - Date.now()) / 1000))
+  yield* Effect.tryPromise({
+    try: () =>
+      caches.default.put(
+        toCacheRequest(key),
+        new Response(entry.body, {
+          status: 200,
+          headers: {
+            "content-type": "application/json; charset=utf-8",
+            etag: entry.etag,
+            "cache-control": cacheControlFor(kind),
+            "x-ol-expires": String(entry.expiresAt),
+            "x-ol-cache-ttl": String(maxAge)
+          }
+        })
+      ),
+    catch: () => undefined
+  }).pipe(Effect.ignore)
+})
 
 export const cacheKeyMap = (keys: readonly string[]) => `map:${[...keys].slice().sort().join(",")}`
 
 export const cacheKeyReport = (key: string) => `report:${key}`
 
-export const cacheKeyPlacesAutocomplete = (q: string) => `places:autocomplete:${q.trim().toLowerCase()}`
+export const cacheKeyPlaceAutocomplete = (q: string) => `places:autocomplete:${q.trim().toLowerCase()}`
 
-export const cacheKeyPlacesDetails = (placeId: string) => `places:details:${placeId.trim().toUpperCase()}`
+export const cacheKeyPlaceDetail = (placeId: string) => `places:details:${placeId.trim().toUpperCase()}`
 
 const notModified = (etag: string, kind: RouteCacheKind) =>
   HttpServerResponse.empty({
@@ -105,48 +115,38 @@ const jsonCached = (body: string, etag: string, kind: RouteCacheKind) =>
  * Serve from edge/memory cache when possible (304 on matching If-None-Match),
  * otherwise run `load`, store JSON, and return with ETag + Cache-Control.
  */
-export const withRouteCache = <E, R>(options: {
+export const withRouteCache = Effect.fn("responseCache.withRouteCache")(function* <E, R>(options: {
   readonly kind: RouteCacheKind
   readonly cacheKey: string
   readonly load: Effect.Effect<unknown, E, R>
-}) =>
-  Effect.gen(function* () {
-    const request = yield* HttpServerRequest.HttpServerRequest
-    const ifNoneMatch = request.headers["if-none-match"]
+}) {
+  const request = yield* HttpServerRequest.HttpServerRequest
+  const ifNoneMatch = request.headers["if-none-match"]
 
-    const cached = yield* Effect.tryPromise({
-      try: () => readEdge(options.cacheKey),
-      catch: () => null
-    }).pipe(Effect.orElseSucceed(() => null))
+  const cached = yield* readEdge(options.cacheKey)
 
-    if (cached) {
-      if (matchesIfNoneMatch(ifNoneMatch, cached.etag)) {
-        return notModified(cached.etag, options.kind)
-      }
-      return jsonCached(cached.body, cached.etag, options.kind)
+  if (cached) {
+    if (matchesIfNoneMatch(ifNoneMatch, cached.etag)) {
+      return notModified(cached.etag, options.kind)
     }
+    return jsonCached(cached.body, cached.etag, options.kind)
+  }
 
-    const payload = yield* options.load
-    const body = JSON.stringify(payload)
-    const etag = yield* Effect.tryPromise({
-      try: () => strongEtag(body),
-      catch: () => `"${body.length.toString(16)}"`
-    })
+  const payload = yield* options.load
+  const body = JSON.stringify(payload)
+  const etag = yield* strongEtag(body).pipe(Effect.orElseSucceed(() => `"${body.length.toString(16)}"`))
 
-    const entry: CacheEntry = {
-      body,
-      etag,
-      expiresAt: Date.now() + ttlMsFor(options.kind)
-    }
+  const entry: CacheEntry = {
+    body,
+    etag,
+    expiresAt: Date.now() + ttlMsFor(options.kind)
+  }
 
-    yield* Effect.tryPromise({
-      try: () => writeEdge(options.cacheKey, entry, options.kind),
-      catch: () => undefined
-    }).pipe(Effect.ignore)
+  yield* writeEdge(options.cacheKey, entry, options.kind)
 
-    if (matchesIfNoneMatch(ifNoneMatch, etag)) {
-      return notModified(etag, options.kind)
-    }
+  if (matchesIfNoneMatch(ifNoneMatch, etag)) {
+    return notModified(etag, options.kind)
+  }
 
-    return jsonCached(body, etag, options.kind)
-  })
+  return jsonCached(body, etag, options.kind)
+})

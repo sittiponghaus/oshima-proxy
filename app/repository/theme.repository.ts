@@ -8,4 +8,4 @@ export {
   themeAtom,
   themeAtomKey,
   type Theme
-} from "@/app/atom/theme.atom"
+} from "@/app/store/theme.store"

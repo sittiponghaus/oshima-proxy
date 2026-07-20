@@ -1,11 +1,11 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, it, test } from "@effect/vitest"
 import { Effect } from "effect"
 import { HttpServerRequest, HttpServerResponse } from "effect/unstable/http"
 
 import {
   cacheKeyMap,
-  cacheKeyPlacesAutocomplete,
-  cacheKeyPlacesDetails,
+  cacheKeyPlaceAutocomplete,
+  cacheKeyPlaceDetail,
   cacheKeyReport,
   withRouteCache
 } from "./response-cache"
@@ -17,18 +17,18 @@ describe("cache keys", () => {
   })
 
   test("normalizes places keys", () => {
-    expect(cacheKeyPlacesAutocomplete("  Tokyo ")).toBe("places:autocomplete:tokyo")
-    expect(cacheKeyPlacesDetails("n123")).toBe("places:details:N123")
+    expect(cacheKeyPlaceAutocomplete("  Tokyo ")).toBe("places:autocomplete:tokyo")
+    expect(cacheKeyPlaceDetail("n123")).toBe("places:details:N123")
     expect(cacheKeyReport("abc")).toBe("report:abc")
   })
 })
 
 describe("withRouteCache", () => {
-  test("stores JSON and serves 304 on matching If-None-Match", async () => {
-    const cacheKey = `places:test:${crypto.randomUUID()}`
+  it.effect("stores JSON and serves 304 on matching If-None-Match", () =>
+    Effect.gen(function* () {
+      const cacheKey = `places:test:${crypto.randomUUID()}`
 
-    const first = await Effect.runPromise(
-      withRouteCache({
+      const first = yield* withRouteCache({
         kind: "places",
         cacheKey,
         load: Effect.succeed({ ok: true })
@@ -38,15 +38,13 @@ describe("withRouteCache", () => {
           HttpServerRequest.fromWeb(new Request("http://localhost/api"))
         )
       )
-    )
-    const firstWeb = HttpServerResponse.toWeb(first)
-    expect(firstWeb.status).toBe(200)
-    expect(await firstWeb.text()).toBe('{"ok":true}')
-    const etag = firstWeb.headers.get("etag")
-    expect(etag).toBeTruthy()
+      const firstWeb = HttpServerResponse.toWeb(first)
+      expect(firstWeb.status).toBe(200)
+      expect(yield* Effect.promise(() => firstWeb.text())).toBe('{"ok":true}')
+      const etag = firstWeb.headers.get("etag")
+      expect(etag).toBeTruthy()
 
-    const second = await Effect.runPromise(
-      withRouteCache({
+      const second = yield* withRouteCache({
         kind: "places",
         cacheKey,
         load: Effect.succeed({ shouldNotRun: true })
@@ -60,7 +58,7 @@ describe("withRouteCache", () => {
           )
         )
       )
-    )
-    expect(HttpServerResponse.toWeb(second).status).toBe(304)
-  })
+      expect(HttpServerResponse.toWeb(second).status).toBe(304)
+    })
+  )
 })

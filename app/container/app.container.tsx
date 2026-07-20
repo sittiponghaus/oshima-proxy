@@ -15,10 +15,11 @@ import {
 } from "@/app/hook/geolocation.hook"
 import { useMapViewport } from "@/app/hook/map-viewport.hook"
 import { useTheme } from "@/app/hook/theme.hook"
-import { loadMapTiles, mapTilesKeysSignature, type MapCluster, type MapMarker } from "@/app/usecase/map-tiles.usecase"
-import type { PlaceResult } from "@/app/usecase/places.usecase"
+import { loadMapTile, mapTileKeySignature, type MapCluster, type MapMarker } from "@/app/usecase/map-tile.usecase"
+import type { PlaceResult } from "@/app/usecase/place.usecase"
 import { useDebounce } from "@uidotdev/usehooks"
 import { type MapRef } from "@vis.gl/react-maplibre"
+import { Effect } from "effect"
 import type { Map as MaplibreMap } from "maplibre-gl"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
@@ -63,7 +64,7 @@ export function App() {
 
   const keysSignature = useMemo(() => {
     if (!viewport) return ""
-    return mapTilesKeysSignature(viewport)
+    return mapTileKeySignature(viewport)
   }, [viewport])
   const debouncedKeysSignature = useDebounce(keysSignature, 180)
 
@@ -73,7 +74,7 @@ export function App() {
     let cancelled = false
     setStatus(LoadStatus.Loading)
 
-    void loadMapTiles(debouncedKeysSignature)
+    void Effect.runPromise(loadMapTile(debouncedKeysSignature))
       .then((result) => {
         if (cancelled) return
         setMarkers(result.markers)

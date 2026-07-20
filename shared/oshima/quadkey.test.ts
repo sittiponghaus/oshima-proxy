@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, test } from "@effect/vitest"
 
 import {
   OSHIMA_MARKER_TILE_ZOOM,

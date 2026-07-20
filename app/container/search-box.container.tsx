@@ -1,12 +1,13 @@
 import { SearchBoxView } from "@/app/component/search-box.component"
 import {
   resolvePlaceSelection,
-  searchPlaces,
-  shouldSearchPlaces,
+  searchPlace,
+  shouldSearchPlace,
   type PlaceResult,
   type PlaceSuggestion
-} from "@/app/usecase/places.usecase"
+} from "@/app/usecase/place.usecase"
 import { useDebounce } from "@uidotdev/usehooks"
+import { Effect } from "effect"
 import { useCallback, useEffect, useId, useRef, useState } from "react"
 
 export type { PlaceResult, PlaceSuggestion }
@@ -29,7 +30,7 @@ export function SearchBox({ onSelect }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    if (!shouldSearchPlaces(debouncedQuery)) {
+    if (!shouldSearchPlace(debouncedQuery)) {
       setSuggestions([])
       setError(null)
       return
@@ -39,7 +40,7 @@ export function SearchBox({ onSelect }: Props) {
     setBusy(true)
     setError(null)
 
-    void searchPlaces(debouncedQuery)
+    void Effect.runPromise(searchPlace(debouncedQuery))
       .then((next) => {
         if (cancelled) return
         setSuggestions(next)
@@ -69,18 +70,21 @@ export function SearchBox({ onSelect }: Props) {
   }, [])
 
   const choose = useCallback(
-    async (suggestion: PlaceSuggestion) => {
+    (suggestion: PlaceSuggestion) => {
       setQuery(suggestion.mainText || suggestion.label)
       setOpen(false)
       setError(null)
       setBusy(true)
-      try {
-        onSelect(await resolvePlaceSelection(suggestion))
-      } catch (cause) {
-        setError(cause instanceof Error ? cause.message : String(cause))
-      } finally {
-        setBusy(false)
-      }
+      void Effect.runPromise(resolvePlaceSelection(suggestion))
+        .then((place) => {
+          onSelect(place)
+        })
+        .catch((cause) => {
+          setError(cause instanceof Error ? cause.message : String(cause))
+        })
+        .finally(() => {
+          setBusy(false)
+        })
     },
     [onSelect]
   )

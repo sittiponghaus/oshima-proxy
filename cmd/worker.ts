@@ -1,5 +1,5 @@
 import { EnvironmentFromWorker, type WorkerEnvBindings } from "@/server/config/environment"
-import { RoutesWithoutEnvLive } from "@/server/runtime/routes"
+import { RoutesWithoutEnvLive } from "@/server/runtime/http"
 /**
  * Cloudflare Workers entry — Effect HttpRouter as a Web fetch handler.
  *

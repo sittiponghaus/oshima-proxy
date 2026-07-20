@@ -1,9 +1,12 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, test } from "@effect/vitest"
 
-import { OshimaPropertyError } from "@/app/adapter/oshima/client.adapter"
 import { LoadStatus } from "@/app/config/load-status"
-
-import { mapPropertyLoadError, propertyContributeUrl, propertySourceUrl } from "./property.repository"
+import {
+  mapPropertyLoadError,
+  PropertyError,
+  propertyContributeUrl,
+  propertySourceUrl
+} from "./property.repository"
 
 describe("property URL helpers", () => {
   test("delegates to shared Oshima URLs", () => {
@@ -13,8 +16,8 @@ describe("property URL helpers", () => {
 })
 
 describe("mapPropertyLoadError", () => {
-  test("maps OshimaPropertyError including cloudflare flag", () => {
-    const error = new OshimaPropertyError({
+  test("maps PropertyError including cloudflare flag", () => {
+    const error = new PropertyError({
       message: "blocked",
       cloudflare: true,
       key: "k1",

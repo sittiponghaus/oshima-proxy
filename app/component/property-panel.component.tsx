@@ -2,7 +2,7 @@ import { LoadStatus } from "@/app/config/load-status"
 import type { MapMarker, PropertyLoadState } from "@/app/usecase/property.usecase"
 import type { PropertyDetail } from "@/app/usecase/property.usecase"
 
-import { Spinner } from "./icons.component"
+import { Spinner } from "./icon.component"
 
 type Props = {
   readonly marker: MapMarker
@@ -29,7 +29,7 @@ export function PropertyPanelView({
   return (
     <dialog
       open
-      className="oshima-panel absolute right-4 bottom-4 z-[1000] m-0 flex max-h-[min(70vh,36rem)] w-[22rem] max-w-[calc(100%-2rem)] flex-col border border-[var(--line)] bg-[var(--panel)] p-0 shadow-lg backdrop-blur open:flex"
+      className="oshima-panel absolute right-4 bottom-4 left-auto z-[1000] m-0 flex max-h-[min(70vh,36rem)] w-[22rem] max-w-[calc(100%-2rem)] flex-col border border-[var(--line)] bg-[var(--panel)] p-0 shadow-lg backdrop-blur open:flex"
       aria-label="Reported property details">
       <div className="flex shrink-0 items-start justify-between gap-3 border-b border-[var(--line)] px-4 py-3">
         <div className="min-w-0">

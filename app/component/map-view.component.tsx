@@ -1,4 +1,4 @@
-import type { MapCluster, MapMarker } from "@/app/usecase/map-tiles.usecase"
+import type { MapCluster, MapMarker } from "@/app/usecase/map-tile.usecase"
 import { Map, Marker, type MapRef } from "@vis.gl/react-maplibre"
 import type { RefObject } from "react"
 

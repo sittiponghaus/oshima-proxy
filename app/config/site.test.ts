@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, test } from "@effect/vitest"
 
 import { GITHUB_REPO_URL, OSHIMALAND_SITE_URL } from "./site"
 

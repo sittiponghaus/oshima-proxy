@@ -1,3 +1,5 @@
+import { Effect } from "effect"
+
 /** Per-route TTL (seconds) for upstream response caching. */
 export const ROUTE_CACHE_POLICY = {
   /** Oshimaland map tiles (`POST /api/v1/map`). */
@@ -18,11 +20,14 @@ export const cacheControlFor = (kind: RouteCacheKind): string => {
 export const ttlMsFor = (kind: RouteCacheKind): number => ROUTE_CACHE_POLICY[kind] * 1000
 
 /** Strong ETag from response body bytes (SHA-256 hex). */
-export const strongEtag = async (body: string): Promise<string> => {
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(body))
+export const strongEtag = Effect.fn("cache.strongEtag")(function* (body: string) {
+  const digest = yield* Effect.tryPromise({
+    try: () => crypto.subtle.digest("SHA-256", new TextEncoder().encode(body)),
+    catch: (cause) => cause
+  })
   const hex = Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("")
   return `"${hex}"`
-}
+})
 
 const stripWeak = (etag: string) => etag.trim().replace(/^W\//i, "").trim()
 

@@ -10,8 +10,10 @@ alwaysApply: false
 
 - `app/` **never** imports from `server/` (directly or via `@/server/...`).
 - Shared contracts live in `shared/` (HTTP helpers, Oshima schemas, quadkeys).
-- Browser HTTP clients live in `app/adapter/` (not `server/adapter/`).
-- `server/adapter/*-route.ts` is Worker/upstream only.
+- Browser HTTP lives in `app/adapter/http.adapter.ts` (one adapter kind; auth variant = separate `*.adapter.ts`, not a provider folder).
+- Browser persistence lives in `app/adapter/localstorage.adapter.ts` (Effect `KeyValueStore` + sync helpers for Atom stores).
+- Domain HTTP calls + mapping live in `app/repository/`.
+- `server/controller/http/*.http.ts` is Worker/upstream only.
 - Enforce with `bun run check:boundaries`.
 
 ## Data flow
@@ -21,9 +23,9 @@ container ← usecase mapper (domain → container shape)
     ↑
 usecase   ← calls repository only
     ↑
-repository ← wraps adapter + repository mapper (wire → domain)
+repository ← wraps http.adapter + repository mapper (wire → domain)
     ↑
-app/adapter or shared
+app/adapter/http.adapter.ts or shared
 ```
 
 Both `usecase/` and `repository/` may own their own mapper when shapes differ. Do not map container shapes inside adapters or repositories beyond domain, and do not call repositories from components.

@@ -1,13 +1,13 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, test } from "@effect/vitest"
 
 import { LoadStatus } from "@/app/config/load-status"
-import { OshimaPropertyError } from "@/app/adapter/oshima/client.adapter"
+import { PropertyError } from "@/app/repository/property.repository"
 
 import { propertyLoadErrorFromCause, propertySourceUrl } from "./property.usecase"
 
 describe("propertyLoadErrorFromCause", () => {
   test("delegates to repository mapping", () => {
-    const cause = new OshimaPropertyError({
+    const cause = new PropertyError({
       message: "cf",
       cloudflare: true,
       key: "k"

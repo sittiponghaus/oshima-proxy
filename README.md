@@ -26,12 +26,12 @@ OL Proxy — Cloudflare Workers + Effect API for Oshimaland map data, with a Rea
 | **Usecase** | `app/usecase/` | Domain orchestration; may map domain → container shape. |
 | **Repository** | `app/repository/` | Wraps adapters; wire → domain mappers. |
 | **Adapter (app)** | `app/adapter/` | Browser HTTP clients (never import `server/`). |
-| **Atom / Hook** | `app/atom/`, `app/hook/` | Client state (Effect Atom) and React glue. |
+| **Atom / Hook** | `app/store/`, `app/hook/` | Client state (Effect Atom) and React glue. |
 | **Shared** | `shared/` | Contracts usable by both app and server (API paths, CSRF constants, Oshima schemas, quadkeys). |
-| **Route adapter** | `server/adapter/` | Worker routes; upstream fetches; response shaping. |
+| **HTTP controller** | `server/controller/http/` | Worker routes (`*.http.ts`); upstream fetches; response shaping. |
 | **Runtime** | `server/runtime/` | Router composition, CSRF/origin middleware, response cache. |
 | **Config** | `server/config/`, `app/config/` | Env, cache TTLs, viewport defaults, site URLs. |
-| **Entry** | `cmd/worker.ts`, `cmd/server.ts` | Workers fetch handler; optional Bun HMR server. |
+| **Entry** | `cmd/worker.ts` | Workers fetch handler. |
 
 **Hard boundary:** `app/` never imports `server/` (directly or via `@/server`). Enforce with `bun run check:boundaries` and `.cursor/rules/layer-boundaries.mdc`.
 
@@ -47,10 +47,9 @@ repository ← adapter + repository mapper (wire → domain)
 app/adapter or shared
 ```
 
-### Runtime split
+### Runtime
 
 - **Production / `wrangler dev`:** `cmd/worker.ts` → `HttpRouter.toWebHandler` + Workers Assets (`dist/`). `assets.run_worker_first: ["/api/v1/*"]` so the Worker owns the API; the SPA is static assets.
-- **Local Bun HMR (optional):** `bun run dev:bun` → `cmd/server.ts` (`BunHttpServer` + HTML HMR) for frontend iteration without Wrangler.
 
 ### API surface
 
@@ -103,16 +102,18 @@ cp .env.example .env.local   # if present
 bun install
 bun run build
 bun run dev                  # wrangler dev (Workers + assets)
-# or
-bun run dev:bun              # Bun HMR on :3000
 ```
 
 ### Deploy
 
 ```bash
 bun run deploy
-# Preview upload only (no production traffic / no multi-version split):
+# Release version upload (package.json tag, no production traffic split):
 bun run deploy:version
+# Branch preview (tag + --preview-alias from git branch):
+bun run deploy:preview
+# After the git branch is gone, delete its Workers Preview:
+bun run preview:delete -- <branch-name>
 # optional secrets when using a browser UA:
 # wrangler secret put OSHIMA_COOKIE
 # wrangler secret put OSHIMA_USER_AGENT
@@ -123,9 +124,10 @@ bun run deploy:version
 Unit tests live **next to sources** as `*.test.ts`. Integration tests live under `test/integration/`.
 
 ```bash
-bun test                 # all
-bun run test:unit        # shared/ + server/ + app/
-bun run test:integration # test/integration/*
+bun run test                 # all (vitest + @effect/vitest)
+bun run test:unit            # shared/ + server/ + app/
+bun run test:integration     # test/integration/*
+bun run test:watch           # watch mode
 ```
 
 | Kind | Location | What |
@@ -152,8 +154,7 @@ bun run fmt:check
 app/           React CSR (adapter → repository → usecase → container → component)
 server/        Worker routes, middleware, cache, env
 shared/        Cross-boundary contracts
-cmd/           worker.ts (CF) · server.ts (Bun)
+cmd/           worker.ts · check-boundaries · prepare-effect · deploy/delete-preview
 test/          integration/ only (unit tests are colocated)
 public/        _headers for Workers Assets CSP
-scripts/       check-boundaries.ts
 ```
