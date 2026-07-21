@@ -43,9 +43,10 @@ export function PropertyPanelView({
   return (
     <dialog
       open
-      className="oshima-panel absolute right-4 bottom-4 left-auto z-[1000] m-0 flex max-h-[min(70vh,36rem)] w-[22rem] max-w-[calc(100%-2rem)] flex-col border border-[var(--line)] bg-[var(--panel)] p-0 shadow-lg backdrop-blur open:flex"
+      // Safari: avoid flex-col + flex-1 + max-height — flex child collapses to ~padding and clips body text.
+      className="oshima-panel absolute right-4 bottom-4 left-auto z-[1000] m-0 max-h-[min(70vh,36rem)] w-[22rem] max-w-[calc(100%-2rem)] overflow-y-auto overscroll-contain border border-[var(--line)] bg-[var(--panel)] p-0 shadow-lg backdrop-blur open:block"
       aria-label="Reported property details">
-      <div className="flex shrink-0 items-start justify-between gap-3 border-b border-[var(--line)] px-4 py-3">
+      <div className="sticky top-0 z-10 flex items-start justify-between gap-3 border-b border-[var(--line)] bg-[var(--panel)] px-4 py-3 backdrop-blur">
         <div className="min-w-0">
           <p className="text-[0.7rem] font-semibold tracking-[0.16em] text-[var(--ember)] uppercase">
             Reported property
@@ -64,7 +65,7 @@ export function PropertyPanelView({
         </button>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
+      <div className="px-4 py-3">
         {state.status === LoadStatus.Loading ? (
           <div className="flex items-center gap-2 text-sm text-[var(--muted)]">
             <Spinner />
